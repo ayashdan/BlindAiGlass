@@ -1,45 +1,58 @@
 /*
   app.js — the "brain" of BlindAiGlass.
 
-  Milestones working so far:
+  Working so far:
    - M0/M1: tap to start, rear camera, spoken welcome + safety message.
    - M3: on-device object detection (~80 everyday objects), private + offline.
-   - M4 (NEW): the app now talks on its OWN when something important is near.
-       * DIRECTION: it says "on your left / ahead / on your right".
-       * DISTANCE (rough): "very close / a few steps away / far" — estimated
-         from how big the object looks. A phone camera cannot measure true
-         distance, so this is an APPROXIMATE hint only, never a precise number.
-       * DOESN'T CHATTER: it only speaks about important, nearby things, and
-         won't repeat the same alert over and over.
-       * Tapping still gives a full "what I see" summary on demand.
-
-  Still to come:
-   - M5/M6: reader (menus/signs), translator, and rich scene descriptions
-     using cloud AI. Those need a small secure backend (see the roadmap).
+   - M4: automatic proximity alerts with direction (left/ahead/right).
+   - M4.1 (NEW): distance estimates you can hear in STEPS, FEET, or METERS —
+       pick your unit with the "Unit" button. (Rough estimates only — a phone
+       camera cannot truly measure distance. We always say "about".)
+   - M5 start (NEW): the "Read" button takes a photo and reads any text out
+       loud (menus, signs, labels) using a cloud AI. It needs a small server
+       (see backend/README.md). Until that server address is filled into
+       BACKEND_URL below, the Read button politely says it is not set up yet.
 */
 
-// ----- Page elements we control -----
+// ==========================================================================
+//  Configuration you may edit
+// ==========================================================================
+
+// After you deploy the reader server (see backend/README.md), paste its
+// address here, e.g. "https://blindaiglass-reader.yourname.workers.dev".
+// Leave it empty ("") until then.
+const BACKEND_URL = "";
+
+// ==========================================================================
+//  Page elements
+// ==========================================================================
 const video = document.getElementById("camera");
 const button = document.getElementById("mainButton");
 const buttonText = document.getElementById("buttonText");
 const statusEl = document.getElementById("status");
+const controls = document.getElementById("controls");
+const readButton = document.getElementById("readButton");
+const unitButton = document.getElementById("unitButton");
 
-// ----- App state (little bits of memory) -----
-let hasStarted = false;      // have we done the one-time startup yet?
-let model = null;            // the loaded AI vision model (null until loaded)
-let currentDetections = [];  // the most recent list of objects the camera sees
-let isDetecting = false;     // guard so two detections don't run at once
+// ==========================================================================
+//  App state
+// ==========================================================================
+let hasStarted = false;
+let model = null;
+let currentDetections = [];
+let isDetecting = false;
 
-// Memory for the automatic-alert system (M4):
-let lastAlertAt = 0;             // when we last spoke an automatic alert
-const alertHistory = new Map();  // remembers "what we said" -> "when", to avoid repeats
+// Automatic-alert memory (M4)
+let lastAlertAt = 0;
+const alertHistory = new Map();
 
-/*
-  ----- Which objects are worth interrupting the user for -----
-  Higher number = more important. Moving things (people, vehicles) matter most.
-  Anything not listed here (bottle, cup, laptop, …) will NOT trigger an
-  automatic alert — you'll still hear it if you tap to ask.
-*/
+// The chosen distance unit: "steps", "feet", or "meters".
+// We remember the last choice on this phone using localStorage.
+let distanceUnit = localStorage.getItem("distanceUnit") || "steps";
+
+// ==========================================================================
+//  Priorities: which objects are worth an automatic alert
+// ==========================================================================
 const PRIORITY = {
   person: 3,
   car: 3, bus: 3, truck: 3, motorcycle: 3, bicycle: 3, train: 3,
@@ -51,11 +64,30 @@ function priorityOf(cls) {
 }
 
 /*
-  speak(text, interrupt)
-  Says something out loud using the phone's built-in voice.
-  If interrupt is true, we stop whatever is being said first (used for urgent
-  alerts). If false, we let the current sentence finish.
+  Rough real-world HEIGHTS (in meters) of common objects.
+  We use these to estimate distance from how tall an object looks on screen.
+  Only objects listed here get a numeric distance; others fall back to words
+  like "very close" / "a few steps away".
 */
+const KNOWN_HEIGHTS = {
+  person: 1.7, chair: 0.9, car: 1.5, bus: 3.0, truck: 3.0,
+  motorcycle: 1.1, bicycle: 1.1, dog: 0.6, cat: 0.3,
+  bottle: 0.25, cup: 0.12, "wine glass": 0.2, laptop: 0.25,
+  "cell phone": 0.15, book: 0.24, backpack: 0.45, handbag: 0.3,
+  suitcase: 0.6, "potted plant": 0.4, tv: 0.6, couch: 0.9,
+  bench: 0.9, "dining table": 0.75, "stop sign": 0.75,
+  "traffic light": 0.9, umbrella: 0.9, refrigerator: 1.7,
+  microwave: 0.3, oven: 0.7, sink: 0.2, toilet: 0.7, bed: 0.6,
+  "teddy bear": 0.3, clock: 0.3, vase: 0.3,
+};
+
+// A rough camera constant used in the distance math (see estimateMeters).
+// This is only an approximation and will not be exact on every phone.
+const FOCAL_FACTOR = 0.82;
+
+// ==========================================================================
+//  Speech + status helpers
+// ==========================================================================
 function speak(text, interrupt = true) {
   if (!("speechSynthesis" in window)) return;
   if (interrupt) window.speechSynthesis.cancel();
@@ -65,18 +97,13 @@ function speak(text, interrupt = true) {
   window.speechSynthesis.speak(utterance);
 }
 
-/*
-  setStatus(text)
-  Updates the text line at the top. VoiceOver also reads this (it's aria-live).
-*/
 function setStatus(text) {
   statusEl.textContent = text;
 }
 
-/*
-  startCamera()
-  Asks for the BACK camera and shows the live picture. true on success.
-*/
+// ==========================================================================
+//  Camera
+// ==========================================================================
 async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -92,28 +119,22 @@ async function startCamera() {
   }
 }
 
-/*
-  ----- Turning a detection's position/size into human words -----
-  A detection's "bbox" is [x, y, width, height] in pixels:
-   - x is how far from the LEFT edge the box starts.
-   - width/height are the box size.
-*/
+// ==========================================================================
+//  Turning position/size into human words
+// ==========================================================================
 
-// LEFT / AHEAD / RIGHT, based on where the middle of the object is across the frame.
+// LEFT / AHEAD / RIGHT from where the object's middle sits across the frame.
 function directionOf(pred, frameWidth) {
   const centerX = pred.bbox[0] + pred.bbox[2] / 2;
-  const fraction = centerX / frameWidth; // 0 = far left, 1 = far right
+  const fraction = centerX / frameWidth;
   if (fraction < 0.34) return "on your left";
   if (fraction > 0.66) return "on your right";
   return "ahead";
 }
 
-/*
-  closenessOf(pred, frameHeight)
-  Rough distance from how TALL the object looks compared to the whole screen.
-  Bigger on screen = closer. This is an estimate only.
-  Returns a spoken label plus a "rank" (0 = closest) we can sort/threshold by.
-*/
+// A coarse closeness bucket from how tall the object looks. Used to decide
+// whether an object is "near enough" to alert about, and as a spoken fallback
+// when we don't know the object's real size.
 function closenessOf(pred, frameHeight) {
   const heightFraction = pred.bbox[3] / frameHeight;
   if (heightFraction >= 0.6) return { label: "very close", rank: 0 };
@@ -122,14 +143,32 @@ function closenessOf(pred, frameHeight) {
   return { label: "far away", rank: 3 };
 }
 
-// Small whole numbers sound nicer as words than digits.
+/*
+  estimateMeters(pred, frameHeight)
+  A ROUGH distance estimate using the "pinhole camera" idea: an object of known
+  real height looks smaller the farther away it is. Returns meters, or null if
+  we don't know this object's real size.
+
+  Honest warning: a single phone camera can't truly measure distance, and if
+  only part of an object is visible the estimate can be well off. Treat it as a
+  soft hint, never a precise figure.
+*/
+function estimateMeters(pred, frameHeight) {
+  const realHeight = KNOWN_HEIGHTS[pred.class];
+  if (!realHeight) return null;
+  const pixelHeight = pred.bbox[3];
+  if (pixelHeight <= 0) return null;
+  const focalPx = FOCAL_FACTOR * frameHeight;
+  return (realHeight * focalPx) / pixelHeight;
+}
+
+// Small whole numbers sound nicer as words.
 const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five",
                       "six", "seven", "eight", "nine", "ten"];
 function numberToWord(n) {
   return n <= 10 ? NUMBER_WORDS[n] : String(n);
 }
 
-// Make a label plural for counts > 1 ("person" -> "people", others add "s").
 function pluralize(label, count) {
   if (count === 1) return label;
   if (label === "person") return "people";
@@ -137,18 +176,45 @@ function pluralize(label, count) {
 }
 
 /*
-  detectOnce()
-  Looks at the camera ONCE, keeps guesses we're >=50% sure of, then checks
-  whether anything deserves an automatic spoken alert. Runs on a timer.
+  distanceText(pred, frameHeight)
+  Produces the spoken distance in the user's chosen unit — e.g.
+  "about three steps away", "about six feet away", "about two meters away" —
+  or a word bucket ("very close", "far away") when we can't compute a number.
 */
+function distanceText(pred, frameHeight) {
+  const meters = estimateMeters(pred, frameHeight);
+
+  // No known size, or extremely close: use the simple word bucket.
+  if (meters === null) return closenessOf(pred, frameHeight).label;
+  if (meters < 0.7) return "very close";
+
+  if (distanceUnit === "feet") {
+    const feet = Math.max(1, Math.round(meters * 3.28084));
+    return "about " + numberToWord(feet) + (feet === 1 ? " foot away" : " feet away");
+  }
+
+  if (distanceUnit === "meters") {
+    // Round to the nearest half-meter under 3m, else to the nearest meter.
+    const rounded = meters < 3 ? Math.round(meters * 2) / 2 : Math.round(meters);
+    const label = rounded === 1 ? "meter" : "meters";
+    return "about " + rounded + " " + label + " away";
+  }
+
+  // Default: steps (a walking step is roughly 0.75 meters).
+  const steps = Math.max(1, Math.round(meters / 0.75));
+  return "about " + numberToWord(steps) + (steps === 1 ? " step away" : " steps away");
+}
+
+// ==========================================================================
+//  Detection loop + automatic alerts
+// ==========================================================================
 async function detectOnce() {
   if (!model || isDetecting || video.readyState < 2) return;
-
   isDetecting = true;
   try {
     const predictions = await model.detect(video);
     currentDetections = predictions.filter((p) => p.score >= 0.5);
-    maybeAutoAlert(); // <-- the new M4 step: talk on our own if needed
+    maybeAutoAlert();
   } catch (err) {
     console.error("Detection error:", err);
   } finally {
@@ -156,23 +222,15 @@ async function detectOnce() {
   }
 }
 
-/*
-  maybeAutoAlert()
-  The heart of "don't constantly talk." It picks the single most important,
-  nearby object and announces it — but only if:
-   - it's an important, close-ish object (not far away, not a low-priority item),
-   - we haven't spoken very recently (a 3-second calm gap), and
-   - we haven't just said this same thing (no repeating "person ahead" forever).
-*/
 function maybeAutoAlert() {
   const now = Date.now();
   const frameWidth = video.videoWidth;
   const frameHeight = video.videoHeight;
   if (!frameWidth || !frameHeight) return;
 
-  // Look only at important objects that are close enough to matter.
   const candidates = currentDetections
     .map((p) => ({
+      pred: p,
       cls: p.class,
       priority: priorityOf(p.class),
       direction: directionOf(p, frameWidth),
@@ -182,40 +240,28 @@ function maybeAutoAlert() {
 
   if (candidates.length === 0) return;
 
-  // Most urgent first: higher priority, then closer.
   candidates.sort(
     (a, b) => b.priority - a.priority || a.closeness.rank - b.closeness.rank
   );
   const top = candidates[0];
 
-  // Keep a calm gap between any two automatic alerts.
-  if (now - lastAlertAt < 3000) return;
-
-  // Don't repeat the exact same alert within 7 seconds.
+  if (now - lastAlertAt < 3000) return; // calm gap between alerts
   const key = top.cls + "|" + top.direction + "|" + top.closeness.rank;
-  if (now - (alertHistory.get(key) || 0) < 7000) return;
+  if (now - (alertHistory.get(key) || 0) < 7000) return; // no repeats
 
-  // Speak it, e.g. "Person ahead, very close."
+  const distance = distanceText(top.pred, frameHeight);
   const sentence =
-    top.cls.charAt(0).toUpperCase() +
-    top.cls.slice(1) +
-    " " +
-    top.direction +
-    ", " +
-    top.closeness.label +
-    ".";
+    top.cls.charAt(0).toUpperCase() + top.cls.slice(1) +
+    " " + top.direction + ", " + distance + ".";
   speak(sentence);
   setStatus(sentence);
   lastAlertAt = now;
   alertHistory.set(key, now);
 }
 
-/*
-  reportWhatISee()
-  The big button's on-demand job: describe everything currently visible,
-  each with its direction and rough distance. Objects that share the same
-  name + direction + distance are grouped ("two chairs on your left").
-*/
+// ==========================================================================
+//  On-demand: "what do you see?"
+// ==========================================================================
 function reportWhatISee() {
   if (currentDetections.length === 0) {
     const msg = "I don't see anything I recognize right now.";
@@ -227,35 +273,30 @@ function reportWhatISee() {
   const frameWidth = video.videoWidth;
   const frameHeight = video.videoHeight;
 
-  // Group by name + direction + closeness so we can count duplicates.
+  // Group identical objects that share a direction AND distance phrase.
   const groups = new Map();
   for (const p of currentDetections) {
     const direction = directionOf(p, frameWidth);
-    const closeness = closenessOf(p, frameHeight);
-    const key = p.class + "|" + direction + "|" + closeness.label;
+    const distance = distanceText(p, frameHeight);
+    const key = p.class + "|" + direction + "|" + distance;
     if (!groups.has(key)) {
       groups.set(key, {
-        cls: p.class,
-        direction,
-        closeness,
+        cls: p.class, direction, distance,
         priority: priorityOf(p.class),
+        rank: closenessOf(p, frameHeight).rank,
         count: 0,
       });
     }
     groups.get(key).count += 1;
   }
 
-  // Most important / closest first, and don't overwhelm: keep the top 5.
   const items = [...groups.values()]
-    .sort(
-      (a, b) => b.priority - a.priority || a.closeness.rank - b.closeness.rank
-    )
+    .sort((a, b) => b.priority - a.priority || a.rank - b.rank)
     .slice(0, 5);
 
-  // Build phrases like "two chairs on your left, a few steps away".
   const phrases = items.map((it) => {
     const noun = numberToWord(it.count) + " " + pluralize(it.cls, it.count);
-    return noun + " " + it.direction + ", " + it.closeness.label;
+    return noun + " " + it.direction + ", " + it.distance;
   });
 
   const sentence = "I see " + phrases.join("; ") + ".";
@@ -263,22 +304,90 @@ function reportWhatISee() {
   speak(sentence);
 }
 
-/*
-  onFirstTap()
-  One-time startup (camera + voice must start from a real tap on iPhone).
-*/
+// ==========================================================================
+//  Distance unit chooser
+// ==========================================================================
+function cycleUnit() {
+  const order = ["steps", "feet", "meters"];
+  const next = order[(order.indexOf(distanceUnit) + 1) % order.length];
+  distanceUnit = next;
+  localStorage.setItem("distanceUnit", next);
+
+  // Update the button label + its VoiceOver description.
+  const nice = next.charAt(0).toUpperCase() + next.slice(1);
+  unitButton.innerHTML = "📏<br />" + nice;
+  unitButton.setAttribute("aria-label", "Distance unit: " + next + ". Tap to change.");
+  speak("Distance in " + next + ".");
+  setStatus("Distance unit: " + next + ".");
+}
+
+// ==========================================================================
+//  Reader (M5): take a photo and read text out loud via the cloud AI
+// ==========================================================================
+
+// Grab the current camera frame as a JPEG, shrunk to save bandwidth,
+// and return just the base64 part (what the server expects).
+function captureFrameBase64(maxDim = 1024) {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const scale = Math.min(1, maxDim / Math.max(vw, vh));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(vw * scale);
+  canvas.height = Math.round(vh * scale);
+  canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+  return dataUrl.split(",")[1]; // strip the "data:image/jpeg;base64," prefix
+}
+
+async function readText() {
+  // If the server isn't configured yet, say so kindly.
+  if (!BACKEND_URL) {
+    speak("The reader is not set up yet. It needs its server address added.");
+    setStatus("Reader not set up. See backend/README.md.");
+    return;
+  }
+  if (!model && !hasStarted) return;
+
+  setStatus("Reading text…");
+  speak("Reading. One moment.");
+
+  try {
+    const image = captureFrameBase64();
+    const resp = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image, mode: "read" }),
+    });
+    if (!resp.ok) throw new Error("server responded " + resp.status);
+
+    const data = await resp.json();
+    const text = (data.text || "").trim();
+    if (!text || text.toLowerCase() === "no text found.") {
+      speak("I could not find any text to read.");
+      setStatus("No text found.");
+      return;
+    }
+    setStatus(text.slice(0, 200));
+    speak(text);
+  } catch (err) {
+    console.error("Reader error:", err);
+    speak("Sorry, the reader failed. Please check your connection and try again.");
+    setStatus("Reader error.");
+  }
+}
+
+// ==========================================================================
+//  Startup + button wiring
+// ==========================================================================
 async function onFirstTap() {
   hasStarted = true;
-
   setStatus("Starting camera…");
   buttonText.textContent = "Starting…";
 
   const cameraOk = await startCamera();
   if (!cameraOk) {
     setStatus("Camera blocked. Please allow camera access and reload.");
-    speak(
-      "I could not turn on the camera. Please allow camera access in Safari and reload the page."
-    );
+    speak("I could not turn on the camera. Please allow camera access in Safari and reload the page.");
     buttonText.textContent = "Camera Blocked";
     return;
   }
@@ -301,29 +410,33 @@ async function onFirstTap() {
     return;
   }
 
-  // Give a short grace period before auto-alerts, so we don't talk over the welcome.
-  lastAlertAt = Date.now() + 2000;
-
-  // Start watching the camera in the background (~1.5 looks per second).
+  lastAlertAt = Date.now() + 2000; // short grace period before auto-alerts
   setInterval(detectOnce, 700);
+
+  // Reveal the bottom control bar and set the unit button to the saved unit.
+  controls.hidden = false;
+  const nice = distanceUnit.charAt(0).toUpperCase() + distanceUnit.slice(1);
+  unitButton.innerHTML = "📏<br />" + nice;
+  unitButton.setAttribute("aria-label", "Distance unit: " + distanceUnit + ". Tap to change.");
 
   setStatus("Ready. I will warn you about people and obstacles nearby.");
   button.setAttribute("aria-label", "Tap to hear everything the camera sees");
   buttonText.innerHTML = "Tap to Ask";
   speak(
     "My vision is ready. I will warn you about important things nearby. " +
-      "Tap the screen any time to hear everything I see."
+      "Tap the middle of the screen to hear what I see. " +
+      "Use the Read button to read text, and the Unit button to change distance units."
   );
 }
 
-// A tap starts the app (first time) or gives a full report (after that).
+// The big middle button: start, or report what we see.
 button.addEventListener("click", () => {
-  if (!hasStarted) {
-    onFirstTap();
-  } else {
-    reportWhatISee();
-  }
+  if (!hasStarted) onFirstTap();
+  else reportWhatISee();
 });
 
-// On page load, invite the user to tap.
+// The two control buttons.
+readButton.addEventListener("click", readText);
+unitButton.addEventListener("click", cycleUnit);
+
 setStatus("Tap anywhere to start.");

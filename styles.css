@@ -57,6 +57,46 @@ body {
   background: rgba(0, 0, 0, 0.55);
 }
 
+/*
+  The bottom control bar holding the Read and Unit buttons.
+  pointer-events: none means taps on the bar itself pass THROUGH to the big
+  button behind it; only the two buttons below (pointer-events: auto) catch taps.
+*/
+#controls {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0.5rem calc(env(safe-area-inset-bottom) + 0.5rem);
+  pointer-events: none;
+}
+
+#controls[hidden] {
+  display: none; /* stay hidden until the app has started */
+}
+
+/* The two control buttons: large, high-contrast, thumb-friendly. */
+.control {
+  flex: 1;                       /* each takes half the width */
+  pointer-events: auto;          /* these ARE tappable */
+  border: 2px solid #ffef5c;
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.7);
+  color: #ffef5c;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.3;
+  padding: 1rem 0.5rem;
+  min-height: 5rem;
+}
+
+.control:active {
+  background: rgba(255, 239, 92, 0.25);
+}
+
 /* The status text at the top of the screen. */
 #status {
   position: fixed;
