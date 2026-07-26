@@ -46,6 +46,16 @@
   -->
   <div id="status" role="status" aria-live="polite">Getting ready…</div>
 
+  <!--
+    The on-device AI vision libraries, loaded from a free public CDN.
+    - tfjs: TensorFlow.js — runs AI models right inside the browser using the phone's GPU.
+    - coco-ssd: a small, ready-trained model that recognizes ~80 everyday objects
+      (person, chair, car, bottle, dog, and more). No training needed from us.
+    These download once (a few MB) and then run fully on the phone.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
   <script src="app.js"></script>
 </body>
 </html>
