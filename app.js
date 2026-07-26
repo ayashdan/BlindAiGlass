@@ -33,9 +33,12 @@ let model = null;
 let currentDetections = [];
 let isDetecting = false;
 
-// Automatic-alert memory (M4)
+// Automatic-alert memory (M4 / walking guide)
 let lastAlertAt = 0;
 const alertHistory = new Map();
+// Remembers how big each kind of object looked recently, so we can tell when
+// something is getting closer ("approaching"). class -> [{ t, h }] samples.
+const sizeHistory = new Map();
 
 // The chosen distance unit: "steps", "feet", or "meters".
 // We remember the last choice on this phone using localStorage.
@@ -221,39 +224,114 @@ async function detectOnce() {
   }
 }
 
+/*
+  isApproaching(cls, h)
+  Records how tall this kind of object looks now (h = fraction of the frame),
+  then reports true if it has grown noticeably over the last ~1.6 seconds —
+  i.e. it is coming toward you. Rough, and walking shakes the camera, so we
+  require a clear increase before we say "approaching".
+*/
+function isApproaching(cls, h) {
+  const now = Date.now();
+  let samples = sizeHistory.get(cls);
+  if (!samples) {
+    samples = [];
+    sizeHistory.set(cls, samples);
+  }
+  samples.push({ t: now, h });
+  while (samples.length && now - samples[0].t > 1600) samples.shift();
+
+  let smallest = h;
+  for (const s of samples) if (s.h < smallest) smallest = s.h;
+  return h - smallest > 0.05 && h >= 0.18;
+}
+
+/*
+  maybeAutoAlert() — the heart of the walking guide.
+  It quietly announces the single most important thing in your path:
+   - people / vehicles / animals that are near OR approaching,
+   - large obstacles right in front of you (trip hazards),
+  with direction, rough distance, an "approaching" warning, and — when the
+  way ahead is blocked — which side is clearer. It stays silent otherwise.
+*/
 function maybeAutoAlert() {
   const now = Date.now();
-  const frameWidth = video.videoWidth;
-  const frameHeight = video.videoHeight;
-  if (!frameWidth || !frameHeight) return;
+  const fw = video.videoWidth;
+  const fh = video.videoHeight;
+  if (!fw || !fh) return;
 
-  const candidates = currentDetections
-    .map((p) => ({
-      pred: p,
-      cls: p.class,
-      priority: priorityOf(p.class),
-      direction: directionOf(p, frameWidth),
-      closeness: closenessOf(p, frameHeight),
-    }))
-    .filter((c) => c.priority >= 2 && c.closeness.rank <= 1); // important + near
+  // Describe every detection with direction, closeness, and screen height.
+  const items = currentDetections.map((p) => ({
+    pred: p,
+    cls: p.class,
+    priority: priorityOf(p.class),
+    direction: directionOf(p, fw),
+    closeness: closenessOf(p, fh),
+    h: p.bbox[3] / fh,
+  }));
 
+  // For each kind of object, feed its biggest instance into the approach check.
+  const maxHByClass = new Map();
+  for (const it of items) {
+    if (it.priority >= 1) {
+      maxHByClass.set(it.cls, Math.max(maxHByClass.get(it.cls) || 0, it.h));
+    }
+  }
+  const approaching = new Set();
+  for (const [cls, h] of maxHByClass) {
+    if (isApproaching(cls, h)) approaching.add(cls);
+  }
+
+  // What is worth speaking up about while walking:
+  //   - people/vehicles/animals that are near, or approaching from any distance
+  //   - furniture-type obstacles only when very close and directly ahead
+  const candidates = items.filter((it) => {
+    if (it.priority >= 2) return it.closeness.rank <= 1 || approaching.has(it.cls);
+    if (it.priority === 1) return it.closeness.rank === 0 && it.direction === "ahead";
+    return false;
+  });
   if (candidates.length === 0) return;
 
   candidates.sort(
     (a, b) => b.priority - a.priority || a.closeness.rank - b.closeness.rank
   );
   const top = candidates[0];
+  const approach = approaching.has(top.cls);
+  const urgent = top.closeness.rank === 0 || approach;
 
-  if (now - lastAlertAt < 3000) return; // calm gap between alerts
-  const key = top.cls + "|" + top.direction + "|" + top.closeness.rank;
-  if (now - (alertHistory.get(key) || 0) < 7000) return; // no repeats
+  // Speak sooner for urgent things; keep a calm gap otherwise. Never repeat
+  // the same alert too quickly.
+  const gap = urgent ? 2000 : 3500;
+  if (now - lastAlertAt < gap) return;
+  const key = top.cls + "|" + top.direction + "|" + (approach ? "approach" : top.closeness.rank);
+  const dedup = urgent ? 4000 : 7000;
+  if (now - (alertHistory.get(key) || 0) < dedup) return;
 
-  const distance = distanceText(top.pred, frameHeight);
-  const sentence =
-    top.cls.charAt(0).toUpperCase() + top.cls.slice(1) +
-    " " + top.direction + ", " + distance + ".";
-  speak(sentence);
-  setStatus(sentence);
+  // Build the short spoken message.
+  const name = top.cls.charAt(0).toUpperCase() + top.cls.slice(1);
+  let msg;
+  if (approach) {
+    msg = name + " approaching" + (top.direction === "ahead" ? "" : " " + top.direction) + ".";
+  } else {
+    msg = name + " " + top.direction + ", " + distanceText(top.pred, fh) + ".";
+  }
+
+  // If something important is close and directly ahead, point to the clearer
+  // side. This is a simple hint from what the camera sees — NOT real navigation.
+  if (top.direction === "ahead" && top.closeness.rank <= 1) {
+    const nearLeft = items.some(
+      (it) => it.priority >= 1 && it.closeness.rank <= 1 && it.direction === "on your left"
+    );
+    const nearRight = items.some(
+      (it) => it.priority >= 1 && it.closeness.rank <= 1 && it.direction === "on your right"
+    );
+    if (!nearLeft && nearRight) msg += " Clearer on your left.";
+    else if (!nearRight && nearLeft) msg += " Clearer on your right.";
+    else if (!nearLeft && !nearRight) msg += " Sides look clearer.";
+  }
+
+  speak(msg);
+  setStatus(msg);
   lastAlertAt = now;
   alertHistory.set(key, now);
 }
@@ -472,13 +550,15 @@ async function onFirstTap() {
   unitButton.innerHTML = "📏<br />" + nice;
   unitButton.setAttribute("aria-label", "Distance unit: " + distanceUnit + ". Tap to change.");
 
-  setStatus("Ready. I will warn you about people and obstacles nearby.");
-  button.setAttribute("aria-label", "Tap to hear everything the camera sees");
+  setStatus("Walking guide ready. Watching for people, vehicles, and obstacles.");
+  button.setAttribute("aria-label", "Tap to hear what is directly ahead");
   buttonText.innerHTML = "Tap to Ask";
   speak(
-    "My vision is ready. I will warn you about important things nearby. " +
-      "Tap the middle of the screen to hear what I see. " +
-      "Use the Read button to read text, and the Unit button to change distance units."
+    "Your walking guide is ready. As you walk, I will quietly warn you about " +
+      "people, vehicles, and obstacles nearby, and tell you when something is " +
+      "approaching or which side is clearer. Very important: I cannot see steps, " +
+      "stairs, or drop-offs, so keep using your cane or guide dog for those. " +
+      "Tap the middle of the screen any time to ask what is directly ahead."
   );
 }
 

@@ -1,7 +1,14 @@
 # BlindAiGlass
 
-An AI assistant for blind and visually impaired people. It uses your phone's
-camera and AI to describe surroundings and give short spoken alerts.
+A quiet **AI walking guide** for blind and visually impaired people. As you
+walk, it uses your phone's camera to warn you — in short spoken cues — about
+people, vehicles, and obstacles nearby, when something is **approaching**, and
+which side is **clearer**. It can also read printed text aloud on demand.
+
+> 🚫 **It cannot see steps, stairs, curbs, or drop-offs** — a single phone
+> camera can't sense depth reliably, and a wrong warning could cause a fall.
+> Keep using your white cane or guide dog for footing. This app is an *extra*
+> layer of information, never a replacement.
 
 > ⚠️ **Safety:** BlindAiGlass is an *extra* helper only. It is **not** a
 > replacement for a white cane or guide dog. Do not rely on it to cross
