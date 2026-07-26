@@ -2,14 +2,20 @@
   app.js — the "brain" of BlindAiGlass.
 
   Milestones working so far:
-   - M0/M1: tap to start, turn on the rear camera, speak a welcome + safety message.
-   - M3 (NEW): on-device object detection. The app now recognizes ~80 everyday
-     objects (person, chair, car, bottle, dog, …) using a small AI model that
-     runs entirely ON THE PHONE. Tap the screen and it tells you what it sees.
+   - M0/M1: tap to start, rear camera, spoken welcome + safety message.
+   - M3: on-device object detection (~80 everyday objects), private + offline.
+   - M4 (NEW): the app now talks on its OWN when something important is near.
+       * DIRECTION: it says "on your left / ahead / on your right".
+       * DISTANCE (rough): "very close / a few steps away / far" — estimated
+         from how big the object looks. A phone camera cannot measure true
+         distance, so this is an APPROXIMATE hint only, never a precise number.
+       * DOESN'T CHATTER: it only speaks about important, nearby things, and
+         won't repeat the same alert over and over.
+       * Tapping still gives a full "what I see" summary on demand.
 
   Still to come:
-   - M4: automatic "Person ahead" style alerts (only when things change).
-   - M5/M6: answering spoken questions and describing surroundings with cloud AI.
+   - M5/M6: reader (menus/signs), translator, and rich scene descriptions
+     using cloud AI. Those need a small secure backend (see the roadmap).
 */
 
 // ----- Page elements we control -----
@@ -20,20 +26,41 @@ const statusEl = document.getElementById("status");
 
 // ----- App state (little bits of memory) -----
 let hasStarted = false;      // have we done the one-time startup yet?
-let model = null;            // the loaded AI vision model (null until it finishes loading)
+let model = null;            // the loaded AI vision model (null until loaded)
 let currentDetections = [];  // the most recent list of objects the camera sees
-let isDetecting = false;     // guard so we don't run two detections at the same time
+let isDetecting = false;     // guard so two detections don't run at once
+
+// Memory for the automatic-alert system (M4):
+let lastAlertAt = 0;             // when we last spoke an automatic alert
+const alertHistory = new Map();  // remembers "what we said" -> "when", to avoid repeats
 
 /*
-  speak(text)
-  Says something out loud using the phone's built-in voice.
-  We cancel anything already being said so alerts never overlap.
+  ----- Which objects are worth interrupting the user for -----
+  Higher number = more important. Moving things (people, vehicles) matter most.
+  Anything not listed here (bottle, cup, laptop, …) will NOT trigger an
+  automatic alert — you'll still hear it if you tap to ask.
 */
-function speak(text) {
+const PRIORITY = {
+  person: 3,
+  car: 3, bus: 3, truck: 3, motorcycle: 3, bicycle: 3, train: 3,
+  dog: 2, cat: 2,
+  chair: 1, bench: 1, "potted plant": 1,
+};
+function priorityOf(cls) {
+  return PRIORITY[cls] || 0;
+}
+
+/*
+  speak(text, interrupt)
+  Says something out loud using the phone's built-in voice.
+  If interrupt is true, we stop whatever is being said first (used for urgent
+  alerts). If false, we let the current sentence finish.
+*/
+function speak(text, interrupt = true) {
   if (!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
+  if (interrupt) window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1.0;
+  utterance.rate = 1.05;
   utterance.pitch = 1.0;
   window.speechSynthesis.speak(utterance);
 }
@@ -48,8 +75,7 @@ function setStatus(text) {
 
 /*
   startCamera()
-  Asks for the BACK camera and shows the live picture.
-  Returns true on success, false if blocked/failed.
+  Asks for the BACK camera and shows the live picture. true on success.
 */
 async function startCamera() {
   try {
@@ -67,20 +93,62 @@ async function startCamera() {
 }
 
 /*
+  ----- Turning a detection's position/size into human words -----
+  A detection's "bbox" is [x, y, width, height] in pixels:
+   - x is how far from the LEFT edge the box starts.
+   - width/height are the box size.
+*/
+
+// LEFT / AHEAD / RIGHT, based on where the middle of the object is across the frame.
+function directionOf(pred, frameWidth) {
+  const centerX = pred.bbox[0] + pred.bbox[2] / 2;
+  const fraction = centerX / frameWidth; // 0 = far left, 1 = far right
+  if (fraction < 0.34) return "on your left";
+  if (fraction > 0.66) return "on your right";
+  return "ahead";
+}
+
+/*
+  closenessOf(pred, frameHeight)
+  Rough distance from how TALL the object looks compared to the whole screen.
+  Bigger on screen = closer. This is an estimate only.
+  Returns a spoken label plus a "rank" (0 = closest) we can sort/threshold by.
+*/
+function closenessOf(pred, frameHeight) {
+  const heightFraction = pred.bbox[3] / frameHeight;
+  if (heightFraction >= 0.6) return { label: "very close", rank: 0 };
+  if (heightFraction >= 0.35) return { label: "a few steps away", rank: 1 };
+  if (heightFraction >= 0.15) return { label: "some distance away", rank: 2 };
+  return { label: "far away", rank: 3 };
+}
+
+// Small whole numbers sound nicer as words than digits.
+const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five",
+                      "six", "seven", "eight", "nine", "ten"];
+function numberToWord(n) {
+  return n <= 10 ? NUMBER_WORDS[n] : String(n);
+}
+
+// Make a label plural for counts > 1 ("person" -> "people", others add "s").
+function pluralize(label, count) {
+  if (count === 1) return label;
+  if (label === "person") return "people";
+  return label + "s";
+}
+
+/*
   detectOnce()
-  Looks at the current camera picture ONE time and updates currentDetections.
-  We keep only guesses the model is at least 50% sure about, to cut down on
-  mistakes. This runs on a timer (a few times per second) in the background.
+  Looks at the camera ONCE, keeps guesses we're >=50% sure of, then checks
+  whether anything deserves an automatic spoken alert. Runs on a timer.
 */
 async function detectOnce() {
-  // Skip if the model isn't ready, a detection is already running,
-  // or the video has no picture yet.
   if (!model || isDetecting || video.readyState < 2) return;
 
   isDetecting = true;
   try {
     const predictions = await model.detect(video);
     currentDetections = predictions.filter((p) => p.score >= 0.5);
+    maybeAutoAlert(); // <-- the new M4 step: talk on our own if needed
   } catch (err) {
     console.error("Detection error:", err);
   } finally {
@@ -89,77 +157,115 @@ async function detectOnce() {
 }
 
 /*
-  ----- Turning a list of objects into natural speech -----
-
-  The model gives us raw labels like ["person", "chair", "chair"].
-  We want to SAY "one person and two chairs" — grouped, counted, and readable.
+  maybeAutoAlert()
+  The heart of "don't constantly talk." It picks the single most important,
+  nearby object and announces it — but only if:
+   - it's an important, close-ish object (not far away, not a low-priority item),
+   - we haven't spoken very recently (a 3-second calm gap), and
+   - we haven't just said this same thing (no repeating "person ahead" forever).
 */
+function maybeAutoAlert() {
+  const now = Date.now();
+  const frameWidth = video.videoWidth;
+  const frameHeight = video.videoHeight;
+  if (!frameWidth || !frameHeight) return;
 
-// Small whole numbers sound nicer as words than digits.
-const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five",
-                      "six", "seven", "eight", "nine", "ten"];
+  // Look only at important objects that are close enough to matter.
+  const candidates = currentDetections
+    .map((p) => ({
+      cls: p.class,
+      priority: priorityOf(p.class),
+      direction: directionOf(p, frameWidth),
+      closeness: closenessOf(p, frameHeight),
+    }))
+    .filter((c) => c.priority >= 2 && c.closeness.rank <= 1); // important + near
 
-function numberToWord(n) {
-  return n <= 10 ? NUMBER_WORDS[n] : String(n);
-}
+  if (candidates.length === 0) return;
 
-// Make a label plural when there is more than one. English is irregular,
-// so we special-case "person" -> "people" and add "s" to the rest.
-function pluralize(label, count) {
-  if (count === 1) return label;
-  if (label === "person") return "people";
-  return label + "s";
-}
+  // Most urgent first: higher priority, then closer.
+  candidates.sort(
+    (a, b) => b.priority - a.priority || a.closeness.rank - b.closeness.rank
+  );
+  const top = candidates[0];
 
-/*
-  describeDetections(detections)
-  Turns the raw detections into one friendly sentence, or a "nothing" message.
-*/
-function describeDetections(detections) {
-  if (detections.length === 0) {
-    return "I don't see anything I recognize right now.";
-  }
+  // Keep a calm gap between any two automatic alerts.
+  if (now - lastAlertAt < 3000) return;
 
-  // Count how many of each object there are, e.g. { person: 1, chair: 2 }.
-  const counts = {};
-  for (const d of detections) {
-    counts[d.class] = (counts[d.class] || 0) + 1;
-  }
+  // Don't repeat the exact same alert within 7 seconds.
+  const key = top.cls + "|" + top.direction + "|" + top.closeness.rank;
+  if (now - (alertHistory.get(key) || 0) < 7000) return;
 
-  // Build phrases like "one person", "two chairs".
-  const phrases = Object.keys(counts).map((label) => {
-    const count = counts[label];
-    return numberToWord(count) + " " + pluralize(label, count);
-  });
-
-  // Join naturally: "a", "a and b", "a, b, and c".
-  let list;
-  if (phrases.length === 1) {
-    list = phrases[0];
-  } else if (phrases.length === 2) {
-    list = phrases[0] + " and " + phrases[1];
-  } else {
-    list =
-      phrases.slice(0, -1).join(", ") + ", and " + phrases[phrases.length - 1];
-  }
-
-  return "I see " + list + ".";
+  // Speak it, e.g. "Person ahead, very close."
+  const sentence =
+    top.cls.charAt(0).toUpperCase() +
+    top.cls.slice(1) +
+    " " +
+    top.direction +
+    ", " +
+    top.closeness.label +
+    ".";
+  speak(sentence);
+  setStatus(sentence);
+  lastAlertAt = now;
+  alertHistory.set(key, now);
 }
 
 /*
   reportWhatISee()
-  The current job of the big button: say out loud what the camera sees now.
+  The big button's on-demand job: describe everything currently visible,
+  each with its direction and rough distance. Objects that share the same
+  name + direction + distance are grouped ("two chairs on your left").
 */
 function reportWhatISee() {
-  const sentence = describeDetections(currentDetections);
+  if (currentDetections.length === 0) {
+    const msg = "I don't see anything I recognize right now.";
+    setStatus(msg);
+    speak(msg);
+    return;
+  }
+
+  const frameWidth = video.videoWidth;
+  const frameHeight = video.videoHeight;
+
+  // Group by name + direction + closeness so we can count duplicates.
+  const groups = new Map();
+  for (const p of currentDetections) {
+    const direction = directionOf(p, frameWidth);
+    const closeness = closenessOf(p, frameHeight);
+    const key = p.class + "|" + direction + "|" + closeness.label;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        cls: p.class,
+        direction,
+        closeness,
+        priority: priorityOf(p.class),
+        count: 0,
+      });
+    }
+    groups.get(key).count += 1;
+  }
+
+  // Most important / closest first, and don't overwhelm: keep the top 5.
+  const items = [...groups.values()]
+    .sort(
+      (a, b) => b.priority - a.priority || a.closeness.rank - b.closeness.rank
+    )
+    .slice(0, 5);
+
+  // Build phrases like "two chairs on your left, a few steps away".
+  const phrases = items.map((it) => {
+    const noun = numberToWord(it.count) + " " + pluralize(it.cls, it.count);
+    return noun + " " + it.direction + ", " + it.closeness.label;
+  });
+
+  const sentence = "I see " + phrases.join("; ") + ".";
   setStatus(sentence);
   speak(sentence);
 }
 
 /*
   onFirstTap()
-  One-time startup. Must run inside a real tap because iPhone only allows
-  the camera and the voice to start from a user action.
+  One-time startup (camera + voice must start from a real tap on iPhone).
 */
 async function onFirstTap() {
   hasStarted = true;
@@ -177,19 +283,15 @@ async function onFirstTap() {
     return;
   }
 
-  // Camera is live. Speak the welcome + the all-important safety message.
   speak(
     "BlindAiGlass is starting. Important: this app is an extra helper only. " +
       "It is not a replacement for your white cane or guide dog. " +
-      "Do not rely on it to cross streets or avoid stairs. " +
-      "I am now loading my vision. One moment."
+      "Distances I give are rough estimates. I am now loading my vision. One moment."
   );
 
-  // Load the AI vision model. This downloads once (needs internet the first time).
   setStatus("Loading AI vision…");
   buttonText.textContent = "Loading Vision…";
   try {
-    // "lite_mobilenet_v2" is the fastest version — best for phones.
     model = await cocoSsd.load({ base: "lite_mobilenet_v2" });
   } catch (err) {
     console.error("Model load error:", err);
@@ -199,19 +301,22 @@ async function onFirstTap() {
     return;
   }
 
-  // Model is ready. Start watching the camera in the background.
-  // Every 700 milliseconds we take one look. This is often enough for walking
-  // speed while being gentle on the battery.
+  // Give a short grace period before auto-alerts, so we don't talk over the welcome.
+  lastAlertAt = Date.now() + 2000;
+
+  // Start watching the camera in the background (~1.5 looks per second).
   setInterval(detectOnce, 700);
 
-  // Update the button's job and tell the user we're ready.
-  setStatus("Ready. Tap to hear what I see.");
-  button.setAttribute("aria-label", "Tap to hear what the camera sees");
+  setStatus("Ready. I will warn you about people and obstacles nearby.");
+  button.setAttribute("aria-label", "Tap to hear everything the camera sees");
   buttonText.innerHTML = "Tap to Ask";
-  speak("My vision is ready. Tap the screen and I will tell you what I see.");
+  speak(
+    "My vision is ready. I will warn you about important things nearby. " +
+      "Tap the screen any time to hear everything I see."
+  );
 }
 
-// A tap either starts the app (first time) or reports what we see (after that).
+// A tap starts the app (first time) or gives a full report (after that).
 button.addEventListener("click", () => {
   if (!hasStarted) {
     onFirstTap();

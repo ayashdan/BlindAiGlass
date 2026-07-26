@@ -45,10 +45,14 @@ otherwise). We use free **GitHub Pages** hosting.
 
 ## Roadmap
 
-- [x] **M0 + M1** — Accessible skeleton: camera preview + spoken welcome. **(you are here)**
-- [ ] **M2** — Voice loop (listen + speak).
-- [ ] **M3** — On-device object detection (person / chair / car …).
-- [ ] **M4** — Smart spoken alerts ("Person ahead").
-- [ ] **M5** — Answer simple questions from what the camera sees.
-- [ ] **M6** — Cloud AI: "Describe my surroundings."
-- [ ] **M7** — Polish, settings, real-user testing.
+- [x] **M0 + M1** — Accessible skeleton: camera preview + spoken welcome.
+- [x] **M3** — On-device object detection (person / chair / car …).
+- [x] **M4** — Automatic spoken alerts with direction + rough distance ("Person ahead, very close"). **(you are here)**
+- [ ] **M5** — Reader: read text out loud (menus, signs, labels) via cloud AI.
+- [ ] **M6** — Translator + rich scene description ("Describe my surroundings").
+- [ ] **M7** — Directional guidance ("the door is on your left, turn left").
+- [ ] **M8** — Polish, settings, real-user testing.
+
+> Note: distances are **rough estimates** from how large objects appear on
+> screen. A single phone camera cannot measure true distance — treat them as
+> hints, never exact figures.
