@@ -1,0 +1,10 @@
+{
+  "name": "BlindAiGlass",
+  "short_name": "BlindAiGlass",
+  "description": "An AI assistant that describes your surroundings out loud for blind and visually impaired users.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait"
+}

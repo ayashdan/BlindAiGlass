@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Tell the phone to size the page to the screen and not let the user zoom by accident.
+       "viewport-fit=cover" lets us paint under the iPhone's notch / rounded corners. -->
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  />
+
+  <!-- These two lines make iOS treat the page more like a real app when saved to the Home Screen. -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+  <title>BlindAiGlass</title>
+
+  <!-- Our styles and our PWA manifest (the file that lets it be "installed"). -->
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+</head>
+
+<body>
+  <!--
+    The camera picture is drawn into this <video> element.
+    - playsinline: REQUIRED on iPhone, otherwise video tries to go fullscreen and breaks.
+    - muted + autoplay: needed so iOS allows the video to play on its own.
+    aria-hidden="true" hides it from the VoiceOver screen reader, because a blind
+    user does not need the raw video described — our app does the talking instead.
+  -->
+  <video id="camera" playsinline muted autoplay aria-hidden="true"></video>
+
+  <!--
+    ONE big button that fills the whole screen.
+    A blind user can tap absolutely anywhere and hit it.
+    aria-label is the text VoiceOver reads out when the button is focused.
+  -->
+  <button id="mainButton" aria-label="Tap anywhere to start BlindAiGlass">
+    <span id="buttonText">Tap Anywhere<br />to Start</span>
+  </button>
+
+  <!--
+    A status line at the top.
+    aria-live="polite" means VoiceOver will read out any text we put here,
+    which is a nice backup to our own spoken voice.
+  -->
+  <div id="status" role="status" aria-live="polite">Getting ready…</div>
+
+  <script src="app.js"></script>
+</body>
+</html>
