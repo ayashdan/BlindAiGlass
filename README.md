@@ -57,6 +57,7 @@ otherwise). We use free **GitHub Pages** hosting.
 - [x] **M4** — Automatic spoken alerts with direction + rough distance.
 - [x] **M4.1** — Choose the distance unit: **steps / feet / meters**. **(you are here)**
 - [x] **M5** — Reader: read text out loud (menus, signs, labels). Runs **on the phone** with in-browser OCR — **no server, no API key, private**.
+- [x] **M5.1** — Voice questions: tap **🎤 Ask**, speak ("what's in front of me?", "is there a chair?", "how many people?"), answered from what it sees. On-device speech-to-text (Whisper) — **keyless, private, works on iPhone**.
 - [ ] **M6** — "Describe my surroundings" (rich scene description).
 - [ ] **M7** — Directional guidance ("the door is on your left, turn left").
 - [ ] **M8** — Polish, settings, real-user testing.

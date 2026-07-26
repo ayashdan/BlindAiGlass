@@ -22,6 +22,7 @@ const button = document.getElementById("mainButton");
 const buttonText = document.getElementById("buttonText");
 const statusEl = document.getElementById("status");
 const controls = document.getElementById("controls");
+const askButton = document.getElementById("askButton");
 const readButton = document.getElementById("readButton");
 const unitButton = document.getElementById("unitButton");
 
@@ -43,6 +44,10 @@ const sizeHistory = new Map();
 // The chosen distance unit: "steps", "feet", or "meters".
 // We remember the last choice on this phone using localStorage.
 let distanceUnit = localStorage.getItem("distanceUnit") || "steps";
+
+// Voice-question state.
+let isListening = false;      // true while recording/answering a spoken question
+let asrPipelinePromise = null; // the on-device speech-to-text engine (loaded once)
 
 // ==========================================================================
 //  Priorities: which objects are worth an automatic alert
@@ -255,6 +260,7 @@ function isApproaching(cls, h) {
   way ahead is blocked — which side is clearer. It stays silent otherwise.
 */
 function maybeAutoAlert() {
+  if (isListening) return; // stay quiet while hearing/answering a question
   const now = Date.now();
   const fw = video.videoWidth;
   const fh = video.videoHeight;
@@ -506,6 +512,234 @@ async function readText() {
 }
 
 // ==========================================================================
+//  Voice questions (tap 🎤, speak, get an answer) — ON THE PHONE
+//  Uses Whisper via transformers.js for speech-to-text. No server, no key.
+// ==========================================================================
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Say something and show it — used for spoken answers.
+function say(msg) {
+  setStatus(msg);
+  speak(msg);
+}
+
+// Load the on-device speech-to-text engine once (downloads a model the first
+// time — needs internet that once, then works offline).
+async function getASR() {
+  if (!asrPipelinePromise) {
+    const mod = await import(
+      "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"
+    );
+    mod.env.allowLocalModels = false; // fetch the model from the internet
+    asrPipelinePromise = mod.pipeline(
+      "automatic-speech-recognition",
+      "Xenova/whisper-tiny.en"
+    );
+  }
+  return asrPipelinePromise;
+}
+
+// Record a few seconds of microphone audio and return it as a Blob.
+async function recordAudio(ms) {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const recorder = new MediaRecorder(stream);
+  const chunks = [];
+  recorder.ondataavailable = (e) => {
+    if (e.data && e.data.size) chunks.push(e.data);
+  };
+  const stopped = new Promise((resolve) => {
+    recorder.onstop = resolve;
+  });
+  recorder.start();
+  await delay(ms);
+  recorder.stop();
+  await stopped;
+  stream.getTracks().forEach((t) => t.stop()); // release the mic
+  return new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+}
+
+// Convert recorded audio into the format Whisper wants: mono, 16,000 samples
+// per second, as raw numbers.
+async function blobToPcm16k(blob) {
+  const arrayBuf = await blob.arrayBuffer();
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AC();
+  const decoded = await ctx.decodeAudioData(arrayBuf);
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const length = Math.max(1, Math.ceil(decoded.duration * 16000));
+  const offline = new OAC(1, length, 16000);
+  const src = offline.createBufferSource();
+  src.buffer = decoded;
+  src.connect(offline.destination);
+  src.start(0);
+  const rendered = await offline.startRendering();
+  if (ctx.close) ctx.close();
+  return rendered.getChannelData(0);
+}
+
+async function transcribe(blob) {
+  const asr = await getASR();
+  const pcm = await blobToPcm16k(blob);
+  const out = await asr(pcm);
+  return (out && out.text ? out.text : "").trim();
+}
+
+/*
+  Words people might use for each object we can recognize. If a spoken question
+  contains one of these, we know which object they're asking about.
+*/
+const CLASS_SYNONYMS = {
+  person: ["person", "people", "someone", "anyone", "human", "man", "woman"],
+  chair: ["chair", "chairs", "seat", "seats"],
+  car: ["car", "cars", "vehicle", "vehicles", "traffic"],
+  bus: ["bus", "buses"],
+  truck: ["truck", "trucks"],
+  bicycle: ["bicycle", "bicycles", "bike", "bikes"],
+  motorcycle: ["motorcycle", "motorbike", "scooter"],
+  dog: ["dog", "dogs", "puppy"],
+  cat: ["cat", "cats", "kitten"],
+  bench: ["bench", "benches"],
+  couch: ["couch", "sofa"],
+  bottle: ["bottle", "bottles", "water bottle"],
+  cup: ["cup", "cups", "mug"],
+  "dining table": ["table", "tables", "desk"],
+  tv: ["tv", "television", "screen", "monitor"],
+  laptop: ["laptop", "computer"],
+  "cell phone": ["phone", "cellphone", "mobile"],
+  book: ["book", "books"],
+  backpack: ["backpack", "bag", "rucksack"],
+  refrigerator: ["fridge", "refrigerator"],
+  "potted plant": ["plant", "plants"],
+  "stop sign": ["stop sign"],
+  "traffic light": ["traffic light", "stoplight"],
+};
+
+// Things people commonly ask about that we CANNOT reliably detect. We answer
+// honestly rather than guessing (important for safety).
+const UNDETECTABLE = [
+  "stairs", "staircase", "stair", "step", "steps", "curb",
+  "door", "doorway", "entrance", "exit", "escalator", "elevator",
+];
+
+// Find which object a spoken question is about (or flag it as undetectable).
+function matchClass(text) {
+  for (const [cls, words] of Object.entries(CLASS_SYNONYMS)) {
+    for (const w of words) {
+      if (text.includes(w)) return cls;
+    }
+  }
+  for (const s of UNDETECTABLE) {
+    if (text.includes(s)) return "__undetectable__:" + s;
+  }
+  return null;
+}
+
+// Join a few directions naturally: "on your left" / "on your left and ahead".
+function joinDirections(dirs) {
+  if (dirs.length === 1) return dirs[0];
+  if (dirs.length === 2) return dirs[0] + " and " + dirs[1];
+  return dirs.slice(0, -1).join(", ") + ", and " + dirs[dirs.length - 1];
+}
+
+/*
+  answerQuestion(text)
+  Understand the transcribed question and answer it from what the camera sees.
+  Handles: read text; how many X; where is X; is there an X; and general
+  "what's in front of me" (anything else).
+*/
+function answerQuestion(text) {
+  const t = text.toLowerCase();
+  const fw = video.videoWidth;
+  const fh = video.videoHeight;
+
+  // "Read this / what does the sign say" -> the Reader.
+  if (/\b(read|reads|reading|says|written|writing|label|menu|sign|text)\b/.test(t)) {
+    readText();
+    return;
+  }
+
+  const target = matchClass(t);
+
+  // Honest answer for things we can't see.
+  if (target && target.startsWith("__undetectable__:")) {
+    const thing = target.split(":")[1];
+    say("I'm sorry, I can't detect " + thing + ". Please use your cane or guide dog for that.");
+    return;
+  }
+
+  if (target) {
+    const found = currentDetections.filter((d) => d.class === target);
+    const count = found.length;
+
+    if (/how many/.test(t)) {
+      if (count === 0) return say("I don't see any " + pluralize(target, 2) + " right now.");
+      return say("I see " + numberToWord(count) + " " + pluralize(target, count) + ".");
+    }
+    if (/(where|which way|which side)/.test(t)) {
+      if (count === 0) return say("I don't see a " + target + " right now.");
+      const dirs = [...new Set(found.map((d) => directionOf(d, fw)))];
+      return say("A " + target + " " + joinDirections(dirs) + ".");
+    }
+    // "is there / do you see / any ..." and general mentions of the object.
+    if (count === 0) return say("No, I don't see a " + target + " right now.");
+    const nearest = found
+      .slice()
+      .sort((a, b) => closenessOf(a, fh).rank - closenessOf(b, fh).rank)[0];
+    return say(
+      "Yes, a " + target + " " + directionOf(nearest, fw) + ", " + distanceText(nearest, fh) + "."
+    );
+  }
+
+  // No specific object mentioned -> describe everything ahead.
+  reportWhatISee();
+}
+
+/*
+  askByVoice()
+  The 🎤 button: listen for a few seconds, transcribe on the phone, then answer.
+*/
+async function askByVoice() {
+  if (!hasStarted || isListening) return;
+  if (typeof MediaRecorder === "undefined") {
+    say("Sorry, this phone does not support voice questions.");
+    return;
+  }
+
+  isListening = true;
+  try {
+    setStatus("Listening… ask your question.");
+    speak("Listening. Ask your question.");
+    await delay(1100); // let the prompt finish so we don't record our own voice
+
+    const audio = await recordAudio(4500); // ~4.5 seconds to speak
+
+    const firstTime = asrPipelinePromise === null;
+    setStatus(firstTime ? "Getting the voice model ready (first time)…" : "Thinking…");
+    speak(firstTime ? "Getting ready for the first time. One moment." : "One moment.");
+
+    const text = await transcribe(audio);
+    if (!text) {
+      say("Sorry, I didn't catch that. Tap the microphone and try again.");
+      return;
+    }
+    setStatus('You asked: "' + text + '"');
+    answerQuestion(text);
+  } catch (err) {
+    console.error("Voice question error:", err);
+    if (err && err.name === "NotAllowedError") {
+      say("I need microphone permission to hear questions. Please allow it in Safari.");
+    } else {
+      say("Sorry, voice questions failed. Please try again.");
+    }
+  } finally {
+    isListening = false;
+  }
+}
+
+// ==========================================================================
 //  Startup + button wiring
 // ==========================================================================
 async function onFirstTap() {
@@ -558,7 +792,8 @@ async function onFirstTap() {
       "people, vehicles, and obstacles nearby, and tell you when something is " +
       "approaching or which side is clearer. Very important: I cannot see steps, " +
       "stairs, or drop-offs, so keep using your cane or guide dog for those. " +
-      "Tap the middle of the screen any time to ask what is directly ahead."
+      "Tap the middle of the screen to hear what is directly ahead, or tap the " +
+      "microphone button and ask a question, like: what is in front of me?"
   );
 }
 
@@ -568,7 +803,8 @@ button.addEventListener("click", () => {
   else reportWhatISee();
 });
 
-// The two control buttons.
+// The three control buttons.
+askButton.addEventListener("click", askByVoice);
 readButton.addEventListener("click", readText);
 unitButton.addEventListener("click", cycleUnit);
 
