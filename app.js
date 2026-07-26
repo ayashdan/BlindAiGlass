@@ -97,8 +97,15 @@ function setStatus(text) {
 // ==========================================================================
 async function startCamera() {
   try {
+    // Ask for the BACK camera at high resolution. A low-res feed (some phones
+    // default to 640x480) is the #1 cause of poor text reading and detection,
+    // so we request 1920x1080 — the phone gives the closest it can.
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" },
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
       audio: false,
     });
     video.srcObject = stream;
@@ -204,7 +211,8 @@ async function detectOnce() {
   isDetecting = true;
   try {
     const predictions = await model.detect(video);
-    currentDetections = predictions.filter((p) => p.score >= 0.5);
+    // Only keep guesses we're at least 60% sure about, to cut wrong labels.
+    currentDetections = predictions.filter((p) => p.score >= 0.6);
     maybeAutoAlert();
   } catch (err) {
     console.error("Detection error:", err);
@@ -322,21 +330,59 @@ function cycleUnit() {
 let ocrWorkerPromise = null;
 function getOcrWorker() {
   if (!ocrWorkerPromise) {
-    ocrWorkerPromise = Tesseract.createWorker("eng");
+    ocrWorkerPromise = (async () => {
+      const worker = await Tesseract.createWorker("eng");
+      // A DPI hint helps Tesseract judge text size; "auto" page layout copes
+      // with both blocks of text (menus) and scattered text (labels).
+      await worker.setParameters({
+        user_defined_dpi: "300",
+        tessedit_pageseg_mode: "3",
+      });
+      return worker;
+    })();
   }
   return ocrWorkerPromise;
 }
 
-// Grab the current camera frame into a canvas for the OCR engine to read.
-// We keep it fairly large because more detail = better text recognition.
-function captureFrameCanvas(maxDim = 1600) {
+/*
+  captureFrameForOcr()
+  Grab the current camera frame and clean it up for reading:
+   - keep lots of detail (up to 2000px), because small text needs pixels,
+   - convert to grayscale,
+   - stretch the contrast so faint text becomes crisp black-on-white.
+  These simple steps dramatically improve on-device OCR accuracy.
+*/
+function captureFrameForOcr(maxDim = 2000) {
   const vw = video.videoWidth;
   const vh = video.videoHeight;
   const scale = Math.min(1, maxDim / Math.max(vw, vh));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(vw * scale);
   canvas.height = Math.round(vh * scale);
-  canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = img.data;
+
+  // Pass 1: grayscale, and find the darkest and lightest pixels.
+  let min = 255;
+  let max = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const g = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0;
+    d[i] = d[i + 1] = d[i + 2] = g;
+    if (g < min) min = g;
+    if (g > max) max = g;
+  }
+
+  // Pass 2: stretch that range across full black-to-white for max contrast.
+  const range = Math.max(1, max - min);
+  for (let i = 0; i < d.length; i += 4) {
+    const v = (((d[i] - min) * 255) / range) | 0;
+    d[i] = d[i + 1] = d[i + 2] = v;
+  }
+
+  ctx.putImageData(img, 0, 0);
   return canvas;
 }
 
@@ -348,8 +394,9 @@ async function readText() {
     return;
   }
 
-  // Take the photo immediately (before any slow model download).
-  const canvas = captureFrameCanvas();
+  // Take the photo immediately (before any slow model download), cleaning it
+  // up (grayscale + contrast) so the OCR engine reads it far more accurately.
+  const canvas = captureFrameForOcr();
 
   // The very first read may need to download the OCR model — warn kindly.
   const firstTime = ocrWorkerPromise === null;
@@ -405,7 +452,9 @@ async function onFirstTap() {
   setStatus("Loading AI vision…");
   buttonText.textContent = "Loading Vision…";
   try {
-    model = await cocoSsd.load({ base: "lite_mobilenet_v2" });
+    // Use the full model ("mobilenet_v2") instead of the "lite" one — it is
+    // more accurate at recognizing objects (a little slower, worth it).
+    model = await cocoSsd.load({ base: "mobilenet_v2" });
   } catch (err) {
     console.error("Model load error:", err);
     setStatus("Could not load AI vision. Check your internet and reload.");
