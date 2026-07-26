@@ -8,20 +8,11 @@
    - M4.1 (NEW): distance estimates you can hear in STEPS, FEET, or METERS —
        pick your unit with the "Unit" button. (Rough estimates only — a phone
        camera cannot truly measure distance. We always say "about".)
-   - M5 start (NEW): the "Read" button takes a photo and reads any text out
-       loud (menus, signs, labels) using a cloud AI. It needs a small server
-       (see backend/README.md). Until that server address is filled into
-       BACKEND_URL below, the Read button politely says it is not set up yet.
+   - M5 (NEW): the "Read" button takes a photo and reads any text out loud
+       (menus, signs, labels). It uses Tesseract.js, a free OCR engine that
+       runs ENTIRELY ON THE PHONE — no server, no API key, and private. It
+       downloads a small model the first time you use Read, then works offline.
 */
-
-// ==========================================================================
-//  Configuration you may edit
-// ==========================================================================
-
-// After you deploy the reader server (see backend/README.md), paste its
-// address here, e.g. "https://blindaiglass-reader.yourname.workers.dev".
-// Leave it empty ("") until then.
-const BACKEND_URL = "";
 
 // ==========================================================================
 //  Page elements
@@ -322,12 +313,23 @@ function cycleUnit() {
 }
 
 // ==========================================================================
-//  Reader (M5): take a photo and read text out loud via the cloud AI
+//  Reader (M5): take a photo and read text out loud — ON THE PHONE
+//  Uses Tesseract.js (in-browser OCR). No server, no API key, private.
 // ==========================================================================
 
-// Grab the current camera frame as a JPEG, shrunk to save bandwidth,
-// and return just the base64 part (what the server expects).
-function captureFrameBase64(maxDim = 1024) {
+// We create the OCR "worker" once and reuse it. The first call downloads a
+// small English model (needs internet that one time); after that it's cached.
+let ocrWorkerPromise = null;
+function getOcrWorker() {
+  if (!ocrWorkerPromise) {
+    ocrWorkerPromise = Tesseract.createWorker("eng");
+  }
+  return ocrWorkerPromise;
+}
+
+// Grab the current camera frame into a canvas for the OCR engine to read.
+// We keep it fairly large because more detail = better text recognition.
+function captureFrameCanvas(maxDim = 1600) {
   const vw = video.videoWidth;
   const vh = video.videoHeight;
   const scale = Math.min(1, maxDim / Math.max(vw, vh));
@@ -335,35 +337,37 @@ function captureFrameBase64(maxDim = 1024) {
   canvas.width = Math.round(vw * scale);
   canvas.height = Math.round(vh * scale);
   canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-  return dataUrl.split(",")[1]; // strip the "data:image/jpeg;base64," prefix
+  return canvas;
 }
 
 async function readText() {
-  // If the server isn't configured yet, say so kindly.
-  if (!BACKEND_URL) {
-    speak("The reader is not set up yet. It needs its server address added.");
-    setStatus("Reader not set up. See backend/README.md.");
+  if (!hasStarted) return;
+  if (typeof Tesseract === "undefined") {
+    speak("The reader could not load. Please check your internet and reload.");
+    setStatus("Reader unavailable.");
     return;
   }
-  if (!model && !hasStarted) return;
 
-  setStatus("Reading text…");
-  speak("Reading. One moment.");
+  // Take the photo immediately (before any slow model download).
+  const canvas = captureFrameCanvas();
+
+  // The very first read may need to download the OCR model — warn kindly.
+  const firstTime = ocrWorkerPromise === null;
+  if (firstTime) {
+    setStatus("Getting the reader ready (first time)…");
+    speak("Getting the reader ready for the first time. This may take a moment.");
+  } else {
+    setStatus("Reading text…");
+    speak("Reading. One moment.");
+  }
 
   try {
-    const image = captureFrameBase64();
-    const resp = await fetch(BACKEND_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image, mode: "read" }),
-    });
-    if (!resp.ok) throw new Error("server responded " + resp.status);
+    const worker = await getOcrWorker();
+    const { data } = await worker.recognize(canvas);
+    const text = (data.text || "").replace(/\s+/g, " ").trim();
 
-    const data = await resp.json();
-    const text = (data.text || "").trim();
-    if (!text || text.toLowerCase() === "no text found.") {
-      speak("I could not find any text to read.");
+    if (!text) {
+      speak("I could not find any text to read. Try holding the phone steady and closer.");
       setStatus("No text found.");
       return;
     }
@@ -371,7 +375,7 @@ async function readText() {
     speak(text);
   } catch (err) {
     console.error("Reader error:", err);
-    speak("Sorry, the reader failed. Please check your connection and try again.");
+    speak("Sorry, the reader failed. Please try again.");
     setStatus("Reader error.");
   }
 }

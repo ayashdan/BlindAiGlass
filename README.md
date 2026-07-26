@@ -49,15 +49,15 @@ otherwise). We use free **GitHub Pages** hosting.
 - [x] **M3** — On-device object detection (person / chair / car …).
 - [x] **M4** — Automatic spoken alerts with direction + rough distance.
 - [x] **M4.1** — Choose the distance unit: **steps / feet / meters**. **(you are here)**
-- [x] **M5** — Reader: read text out loud (menus, signs, labels) via cloud AI. *(needs the server in `backend/` — see `backend/README.md`)*
-- [ ] **M6** — Translator + rich scene description ("Describe my surroundings").
+- [x] **M5** — Reader: read text out loud (menus, signs, labels). Runs **on the phone** with in-browser OCR — **no server, no API key, private**.
+- [ ] **M6** — "Describe my surroundings" (rich scene description).
 - [ ] **M7** — Directional guidance ("the door is on your left, turn left").
 - [ ] **M8** — Polish, settings, real-user testing.
 
-The app now has three controls: the big **middle** area = "what do you see?",
-the **Read** button = read text aloud, and the **Unit** button = switch
-steps/feet/meters. The reader stays inert until you deploy the tiny server in
-`backend/` and paste its address into `BACKEND_URL` in `app.js`.
+The app has three controls: the big **middle** area = "what do you see?",
+the **📖 Read** button = read text aloud, and the **📏 Unit** button = switch
+steps/feet/meters. The Reader downloads a small model the first time you use
+it, then works offline. Nothing you photograph ever leaves your phone.
 
 > Note: distances are **rough estimates** from how large objects appear on
 > screen. A single phone camera cannot measure true distance — treat them as
