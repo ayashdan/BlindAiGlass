@@ -73,7 +73,9 @@ If all four work, Phase 1 is done. ✅
 
 ## Roadmap
 - [x] **Phase 1** — Setup, auth, database, profile.
-- [ ] **Phase 2** — XP system + levels (earning + leveling up).
+- [x] **Phase 2** — XP system + levels: server-side XP awarding, animated XP
+  bar, level-up + rank-up celebration. (Temporary "Gain 100 XP" test button on
+  the dashboard until real workouts land in Phase 3.)
 - [ ] **Phase 3** — Workout logging.
 - [ ] **Phase 4** — Streaks + achievements.
 - [ ] **Phase 5** — Waitlist landing page + referrals.
