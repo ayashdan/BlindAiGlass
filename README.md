@@ -1,72 +1,81 @@
-# BlindAiGlass
+# Forge 🔥
 
-A quiet **AI walking guide** for blind and visually impaired people. As you
-walk, it uses your phone's camera to warn you — in short spoken cues — about
-people, vehicles, and obstacles nearby, when something is **approaching**, and
-which side is **clearer**. It can also read printed text aloud on demand.
+A gamified fitness app that makes working out feel like a video game — earn
+**XP**, hit **levels**, keep **streaks**, climb **ranks**, and unlock
+**achievements**. Built with 100% free tools.
 
-> 🚫 **It cannot see steps, stairs, curbs, or drop-offs** — a single phone
-> camera can't sense depth reliably, and a wrong warning could cause a fall.
-> Keep using your white cane or guide dog for footing. This app is an *extra*
-> layer of information, never a replacement.
+**Stack:** Next.js · React · TypeScript · Tailwind CSS · Supabase (free) · Vercel (free)
 
-> ⚠️ **Safety:** BlindAiGlass is an *extra* helper only. It is **not** a
-> replacement for a white cane or guide dog. Do not rely on it to cross
-> streets, detect stairs, or avoid hazards.
+---
 
-## What this is
+## Phase 1 — what's built
 
-A **web app** (PWA) — a website that behaves like an app. You test it by
-opening a link in **Safari on your iPhone**. No App Store, no Mac needed.
+- Project setup (Next.js + TypeScript + Tailwind, dark theme).
+- Sign up / log in / log out with a chosen **username**.
+- A **profile** auto-created in the database on sign-up (username, XP, level,
+  rank, streaks, workouts).
+- A dashboard showing your Level, rank, an XP progress bar, and streak stats.
 
-## How to test it on your iPhone
+---
 
-The app must be served over **HTTPS** (the iPhone will not allow the camera
-otherwise). We use free **GitHub Pages** hosting.
+## Run it locally (first-time setup, ~5 min)
 
-**One-time setup (in the GitHub website):**
+### 1. Create a free Supabase project
+1. Go to **https://supabase.com** → sign up (free, no card).
+2. **New project** → name it `forge`, pick a database password (save it),
+   choose the closest region, and create it (~2 min to provision).
 
-1. Go to the repository → **Settings** → **Pages** (left sidebar).
-2. Under **Source**, choose **Deploy from a branch**.
-3. Pick the branch **`claude/ai-assistant-visually-impaired-ukk9t2`** and folder **`/ (root)`**.
-4. Click **Save** and wait about a minute.
+### 2. Create the database table
+1. In Supabase, open **SQL Editor → New query**.
+2. Copy the entire contents of `supabase/migrations/0001_profiles.sql`,
+   paste it, and click **Run**. You should see "Success".
 
-**Then, on your iPhone:**
+### 3. Turn off email confirmation (for easy testing)
+- Supabase → **Authentication → Sign In / Providers → Email** → turn
+  **"Confirm email" OFF** → Save. (This lets sign-up log you straight in while
+  testing. We can turn it back on before real launch.)
 
-1. Open **Safari** and go to: `https://ayashdan.github.io/BlindAiGlass/`
-2. Tap the big **"Tap Anywhere to Start"** button.
-3. When Safari asks, tap **Allow** for the camera.
-4. You should see the camera picture and hear the welcome + safety message.
+### 4. Add your keys
+1. Supabase → **Project Settings → API**. Copy the **Project URL** and the
+   **anon public** key.
+2. In this project, copy `.env.local.example` to a new file `.env.local` and
+   paste your two values in.
 
-> Tip: For the best hands-free experience later, use **bone-conduction
-> headphones** or leave one ear open, so you can still hear the world around you.
+### 5. Install and run
+```bash
+npm install
+npm run dev
+```
+Open **http://localhost:3000**.
 
-## Project files
+---
 
-| File | What it does |
-|------|--------------|
-| `index.html` | The page structure: the camera view, the big button, the status line. |
-| `styles.css` | High-contrast, large-text, full-screen accessible styling. |
-| `app.js` | The app logic: start camera, speak out loud, react to taps. |
-| `manifest.webmanifest` | Lets the app be "installed" to the Home Screen like a real app. |
+## How to test Phase 1
+
+1. Click **Get started**, create an account with a username, email, password.
+2. You should land on the **dashboard** showing your username, **Level 1**,
+   rank **Beginner**, an empty XP bar, and streak/workout stats at 0.
+3. Click **Log out**, then **Log in** with the same details — you're back in.
+4. In Supabase → **Table Editor → profiles**, confirm a row exists for you.
+
+If all four work, Phase 1 is done. ✅
+
+---
+
+## Deploy free on Vercel (optional now, or later)
+1. Push this repo to GitHub (already done if you're reading this there).
+2. Go to **https://vercel.com** → sign in with GitHub → **Import** this repo.
+3. Add the two environment variables (`NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`) in Vercel's project settings.
+4. Deploy. Every future `git push` auto-deploys.
+
+---
 
 ## Roadmap
-
-- [x] **M0 + M1** — Accessible skeleton: camera preview + spoken welcome.
-- [x] **M3** — On-device object detection (person / chair / car …).
-- [x] **M4** — Automatic spoken alerts with direction + rough distance.
-- [x] **M4.1** — Choose the distance unit: **steps / feet / meters**. **(you are here)**
-- [x] **M5** — Reader: read text out loud (menus, signs, labels). Runs **on the phone** with in-browser OCR — **no server, no API key, private**.
-- [x] **M5.1** — Voice questions: tap **🎤 Ask**, speak ("what's in front of me?", "is there a chair?", "how many people?"), answered from what it sees. On-device speech-to-text (Whisper) — **keyless, private, works on iPhone**.
-- [ ] **M6** — "Describe my surroundings" (rich scene description).
-- [ ] **M7** — Directional guidance ("the door is on your left, turn left").
-- [ ] **M8** — Polish, settings, real-user testing.
-
-The app has three controls: the big **middle** area = "what do you see?",
-the **📖 Read** button = read text aloud, and the **📏 Unit** button = switch
-steps/feet/meters. The Reader downloads a small model the first time you use
-it, then works offline. Nothing you photograph ever leaves your phone.
-
-> Note: distances are **rough estimates** from how large objects appear on
-> screen. A single phone camera cannot measure true distance — treat them as
-> hints, never exact figures.
+- [x] **Phase 1** — Setup, auth, database, profile.
+- [ ] **Phase 2** — XP system + levels (earning + leveling up).
+- [ ] **Phase 3** — Workout logging.
+- [ ] **Phase 4** — Streaks + achievements.
+- [ ] **Phase 5** — Waitlist landing page + referrals.
+- [ ] **Phase 6** — Admin dashboard.
+- [ ] **Phase 7** — UI polish + animations.
