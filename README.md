@@ -82,6 +82,9 @@ If all four work, Phase 1 is done. ✅
   consecutive-day workouts (bonus XP at each 7-day milestone) and resets on a
   miss; auto-unlocking achievement badges (First Workout, 7 Day Warrior, 30 Day
   Beast, Century, Level 10/50) shown on an Achievements page.
-- [ ] **Phase 5** — Waitlist landing page + referrals.
+- [x] **Phase 5** — Waitlist landing page (email signup, app mockup) + a
+  referral system: each person gets a shareable invite link, and referrals move
+  them up the line. Position/referrals shown on a personal waitlist page, backed
+  by security-definer DB functions so the email list is never publicly readable.
 - [ ] **Phase 6** — Admin dashboard.
 - [ ] **Phase 7** — UI polish + animations.
