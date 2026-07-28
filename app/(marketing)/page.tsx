@@ -88,10 +88,6 @@ export default function Home({
         Already have access?{" "}
         <Link href="/login" className="font-semibold text-forge">
           Log in
-        </Link>{" "}
-        ·{" "}
-        <Link href="/signup" className="font-semibold text-forge">
-          Create account
         </Link>
       </p>
     </main>

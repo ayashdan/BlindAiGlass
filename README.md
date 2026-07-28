@@ -86,5 +86,52 @@ If all four work, Phase 1 is done. ✅
   referral system: each person gets a shareable invite link, and referrals move
   them up the line. Position/referrals shown on a personal waitlist page, backed
   by security-definer DB functions so the email list is never publicly readable.
-- [ ] **Phase 6** — Admin dashboard.
+- [x] **Phase 6** — Admin dashboard: overview analytics (total users, active
+  today, workouts logged, avg streak, 7-day retention, waitlist size), user
+  search/view/delete, waitlist viewer + CSV export, achievement catalog
+  editor (name/description/XP reward, add/delete), and a launch switch that
+  gates public sign-up. A pre-launch gate now blocks account creation for
+  everyone except the admin until launch is flipped on.
 - [ ] **Phase 7** — UI polish + animations.
+
+---
+
+## Phase 6 setup — required before it works
+
+1. Run `supabase/migrations/0005_admin.sql` in Supabase SQL Editor (same as
+   every other migration: SQL Editor → New query → paste → Run).
+2. Get your **service role** key: Supabase → **Project Settings → API** →
+   under "Project API keys" click **Reveal** next to `service_role`, copy it.
+   This key bypasses all security rules — never share it, never put it in
+   code, never prefix it `NEXT_PUBLIC_`.
+3. Add it as `SUPABASE_SERVICE_ROLE_KEY` to `.env.local` (for local dev) and
+   to Vercel → your project → **Settings → Environment Variables** (for
+   Production/Preview/Development) — same place you added the other two
+   Supabase values.
+4. Redeploy on Vercel after adding the env var (Vercel doesn't pick up new
+   env vars on already-running deployments).
+
+### How the pre-launch gate works
+- The app starts **closed**: nobody but the admin email
+  (`yoniayash007@gmail.com`) can create an account. Everyone else who tries
+  to sign up gets redirected back to the waitlist.
+- Only you (the admin) can flip this by visiting **`/admin/settings`** and
+  clicking **"🚀 Launch Forge"**. That's the only thing that opens
+  public sign-up.
+
+### How to test Phase 6
+1. Log in with the admin email → you'll see an **Admin** button on your
+   dashboard → click it (or go to `/admin`).
+2. **Overview** — sanity-check the numbers match what you'd expect.
+3. **Users** — search a username, confirm delete removes them (careful,
+   this is permanent — it deletes their whole account).
+4. **Waitlist** — confirm your test signups show up, click **Export CSV**.
+5. **Achievements** — edit an XP reward, save, confirm it changed in
+   Supabase's Table Editor.
+6. **Settings** — confirm it shows "🔒 Pre-launch." Open an incognito
+   window, try to sign up with a non-admin email — you should get bounced
+   to the waitlist with a message. Come back, click **"🚀 Launch Forge,"**
+   then retry the incognito sign-up — it should work now. Flip it back to
+   pre-launch when you're done testing.
+7. Try visiting `/admin` while logged in as a non-admin (or logged out) —
+   confirm you're redirected to `/login`.

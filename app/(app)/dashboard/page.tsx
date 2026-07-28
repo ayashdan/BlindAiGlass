@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/(auth)/actions";
 import { levelProgress, rankForLevel } from "@/lib/game/leveling";
+import { isAdminEmail } from "@/lib/admin";
 import type { Profile } from "@/lib/types";
 
 // The logged-in home hub. Shows your level/XP/rank and stats, plus the main
@@ -42,11 +43,21 @@ export default async function Dashboard() {
           <p className="text-sm text-neutral-400">Welcome back,</p>
           <h1 className="text-2xl font-black tracking-tight">{profile.username}</h1>
         </div>
-        <form action={signOut}>
-          <button className="rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-300 transition hover:border-neutral-600">
-            Log out
-          </button>
-        </form>
+        <div className="flex items-center gap-2">
+          {isAdminEmail(user.email) && (
+            <Link
+              href="/admin"
+              className="rounded-lg border border-forge/40 px-3 py-2 text-sm text-forge transition hover:bg-forge/10"
+            >
+              Admin
+            </Link>
+          )}
+          <form action={signOut}>
+            <button className="rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-300 transition hover:border-neutral-600">
+              Log out
+            </button>
+          </form>
+        </div>
       </header>
 
       {/* Level + XP card */}
