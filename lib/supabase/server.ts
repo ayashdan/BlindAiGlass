@@ -14,7 +14,7 @@ export function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
           // Writing cookies only works in a server action / route handler.
           // In a plain server component it throws, which is safe to ignore.
           try {
