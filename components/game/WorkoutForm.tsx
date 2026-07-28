@@ -4,7 +4,8 @@
 // a reward screen ("+125 XP") and a level-up celebration when one happens.
 import { useState } from "react";
 import Link from "next/link";
-import { logWorkout, type WorkoutResult } from "@/app/(app)/workout/actions";
+import { logWorkout } from "@/app/(app)/workout/actions";
+import type { WorkoutResult } from "@/lib/types";
 
 const TYPES = [
   { key: "push", label: "Push" },

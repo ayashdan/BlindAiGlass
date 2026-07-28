@@ -15,11 +15,12 @@ export default async function Dashboard() {
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
+  const { data } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single<Profile>();
+    .single();
+  const profile = data as Profile | null;
 
   if (!profile) {
     return (

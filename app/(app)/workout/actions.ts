@@ -5,17 +5,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { applyXp } from "@/lib/game/xp-server";
-
-export type WorkoutResult =
-  | { ok: false; error: string }
-  | {
-      ok: true;
-      xpEarned: number;
-      leveledUp: boolean;
-      level: number;
-      rank: string;
-      rankChanged: boolean;
-    };
+import type { WorkoutResult } from "@/lib/types";
 
 const VALID_TYPES = ["push", "pull", "legs", "full", "custom"];
 // Completing a workout is worth a base 100 XP, plus a bonus for difficulty.

@@ -14,3 +14,15 @@ export type Profile = {
   is_admin: boolean;
   created_at: string;
 };
+
+// The result of logging a workout (shared between the server action and the UI).
+export type WorkoutResult =
+  | { ok: false; error: string }
+  | {
+      ok: true;
+      xpEarned: number;
+      leveledUp: boolean;
+      level: number;
+      rank: string;
+      rankChanged: boolean;
+    };
