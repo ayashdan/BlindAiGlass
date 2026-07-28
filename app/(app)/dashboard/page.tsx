@@ -61,7 +61,7 @@ export default async function Dashboard() {
       </header>
 
       {/* Level + XP card */}
-      <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
+      <section className="fade-in-up rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
         <div className="mb-3 flex items-baseline justify-between">
           <span className="text-lg font-bold">Level {progress.level}</span>
           <span className="rounded-full bg-forge/15 px-3 py-1 text-sm font-semibold text-forge">
@@ -84,13 +84,17 @@ export default async function Dashboard() {
       {/* Main action */}
       <Link
         href="/workout"
-        className="mt-4 block rounded-2xl bg-forge py-5 text-center text-lg font-black text-neutral-950 transition hover:bg-forge-soft"
+        className="press fade-in-up mt-4 block rounded-2xl bg-forge py-5 text-center text-lg font-black text-neutral-950 transition hover:bg-forge-soft"
+        style={{ animationDelay: "0.05s" }}
       >
         + Log a workout
       </Link>
 
       {/* Quick stats */}
-      <section className="mt-4 grid grid-cols-3 gap-3">
+      <section
+        className="fade-in-up mt-4 grid grid-cols-3 gap-3"
+        style={{ animationDelay: "0.1s" }}
+      >
         <Stat label="Streak" value={`${profile.current_streak}🔥`} />
         <Stat label="Best" value={`${profile.longest_streak}`} />
         <Stat label="Workouts" value={`${profile.total_workouts}`} />
@@ -99,7 +103,8 @@ export default async function Dashboard() {
       {/* Achievements */}
       <Link
         href="/achievements"
-        className="mt-4 flex items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900 px-5 py-4 transition hover:border-neutral-600"
+        className="fade-in-up mt-4 flex items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900 px-5 py-4 transition hover:border-neutral-600"
+        style={{ animationDelay: "0.15s" }}
       >
         <span className="font-bold">🏅 Achievements</span>
         <span className="text-neutral-400">View →</span>

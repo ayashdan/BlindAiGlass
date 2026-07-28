@@ -92,7 +92,21 @@ If all four work, Phase 1 is done. ✅
   editor (name/description/XP reward, add/delete), and a launch switch that
   gates public sign-up. A pre-launch gate now blocks account creation for
   everyone except the admin until launch is flipped on.
-- [ ] **Phase 7** — UI polish + animations.
+- [x] **Phase 7** — UI polish: a full-screen achievement celebration (confetti
+  + bouncing badge pop-in) whenever you unlock one, a matching pop-in on the
+  level-up banner, staggered fade-ins on the dashboard/achievements cards, a
+  soft persistent glow on unlocked achievement badges, and tactile
+  press-down feedback on the main buttons. Respects `prefers-reduced-motion`.
+
+### How to test Phase 7
+1. Log a workout that unlocks an achievement (e.g. your very first one, or
+   hit a 7-day streak) — you should get a full-screen confetti celebration
+   with the badge bouncing in. Tap **"Nice!"** to dismiss it.
+2. Level up in the same workout — the "⬆️ Level X!" banner should pop in
+   with a little bounce.
+3. Visit the dashboard and achievements page — cards should fade/slide in
+   on load, and any unlocked achievement badge should have a soft orange
+   glow around it.
 
 ---
 

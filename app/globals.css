@@ -9,3 +9,65 @@
 body {
   @apply bg-neutral-950 text-neutral-100 antialiased;
 }
+
+/* ---- Phase 7: shared motion ---- */
+
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up {
+  animation: fade-in-up 0.5s ease-out both;
+}
+
+/* A tactile "press" feel for primary buttons. */
+.press {
+  transition: transform 0.15s ease;
+}
+.press:active {
+  transform: scale(0.96);
+}
+
+/* Pop-in used for achievement cards and the level-up banner: overshoots
+   slightly then settles, ending on a soft glow so unlocked things keep
+   feeling special after the motion stops. */
+@keyframes celebrate-pop {
+  0%   { opacity: 0; transform: scale(0.6) translateY(12px); box-shadow: 0 0 0 rgba(250, 204, 21, 0); }
+  55%  { opacity: 1; transform: scale(1.08) translateY(0); }
+  70%  { transform: scale(1) translateY(0); box-shadow: 0 0 28px rgba(250, 204, 21, 0.45); }
+  100% { transform: scale(1) translateY(0); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
+}
+.celebrate-pop {
+  animation: celebrate-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes celebrate-bounce {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  20%      { transform: rotate(-14deg) scale(1.15); }
+  40%      { transform: rotate(10deg) scale(1.15); }
+  60%      { transform: rotate(-6deg) scale(1.05); }
+  80%      { transform: rotate(4deg) scale(1.05); }
+}
+.celebrate-bounce {
+  animation: celebrate-bounce 0.8s ease-in-out both;
+}
+
+@keyframes confetti-fall {
+  0%   { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+.confetti-piece {
+  animation: confetti-fall linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-up,
+  .celebrate-pop,
+  .celebrate-bounce,
+  .confetti-piece {
+    animation: none !important;
+  }
+  .press:active {
+    transform: none;
+  }
+}

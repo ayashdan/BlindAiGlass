@@ -33,17 +33,18 @@ export default async function AchievementsPage() {
       </p>
 
       <div className="space-y-3">
-        {list.map((a) => {
+        {list.map((a, i) => {
           const unlocked = have.has(a.id);
           return (
             <div
               key={a.id}
               className={
-                "flex items-center gap-4 rounded-xl border p-4 " +
+                "fade-in-up flex items-center gap-4 rounded-xl border p-4 transition " +
                 (unlocked
-                  ? "border-forge/40 bg-forge/5"
+                  ? "border-forge/40 bg-forge/5 shadow-[0_0_18px_rgba(255,106,26,0.15)]"
                   : "border-neutral-800 bg-neutral-900 opacity-60")
               }
+              style={{ animationDelay: `${Math.min(i, 8) * 0.05}s` }}
             >
               <div className="text-3xl">{unlocked ? a.icon : "🔒"}</div>
               <div className="flex-1">

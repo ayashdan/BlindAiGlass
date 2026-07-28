@@ -5,6 +5,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { logWorkout } from "@/app/(app)/workout/actions";
+import AchievementCelebration from "./AchievementCelebration";
 import type { WorkoutResult } from "@/lib/types";
 
 const TYPES = [
@@ -30,13 +31,17 @@ export default function WorkoutForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Extract<WorkoutResult, { ok: true }> | null>(null);
+  const [celebrating, setCelebrating] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
     const res = await runSubmit();
-    if (res && res.ok) setResult(res);
+    if (res && res.ok) {
+      setResult(res);
+      if (res.unlocked.length > 0) setCelebrating(true);
+    }
   }
 
   async function runSubmit(): Promise<WorkoutResult | null> {
@@ -75,57 +80,66 @@ export default function WorkoutForm() {
   // ---- Reward screen ----
   if (result) {
     return (
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-8 text-center">
-        <div className="text-5xl">💪</div>
-        <p className="mt-3 text-sm font-semibold uppercase tracking-[0.3em] text-neutral-400">
-          Workout complete
-        </p>
-        <p className="mt-2 text-4xl font-black text-forge">+{result.xpEarned} XP</p>
-
-        <p className="mt-3 text-lg font-bold">
-          🔥 {result.streak} day streak
-        </p>
-
-        {result.leveledUp && (
-          <div className="mt-6 rounded-xl border border-forge/40 bg-forge/10 p-4">
-            <p className="text-lg font-black">⬆️ Level {result.level}!</p>
-            {result.rankChanged && (
-              <p className="mt-1 font-semibold text-forge">New rank: {result.rank}</p>
-            )}
-          </div>
+      <>
+        {celebrating && (
+          <AchievementCelebration
+            achievements={result.unlocked}
+            onDismiss={() => setCelebrating(false)}
+          />
         )}
 
-        {result.unlocked.length > 0 && (
-          <div className="mt-4 space-y-2">
-            {result.unlocked.map((a) => (
-              <div
-                key={a.key}
-                className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-3"
-              >
-                <p className="font-bold">
-                  {a.icon} Achievement unlocked: {a.name}
-                </p>
-                <p className="text-sm text-yellow-300/90">+{a.xpReward} XP</p>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="fade-in-up rounded-2xl border border-neutral-800 bg-neutral-900 p-8 text-center">
+          <div className="text-5xl">💪</div>
+          <p className="mt-3 text-sm font-semibold uppercase tracking-[0.3em] text-neutral-400">
+            Workout complete
+          </p>
+          <p className="mt-2 text-4xl font-black text-forge">+{result.xpEarned} XP</p>
 
-        <div className="mt-8 flex flex-col gap-3">
-          <button
-            onClick={reset}
-            className="rounded-lg border border-neutral-800 py-3 font-bold transition hover:border-neutral-600"
-          >
-            Log another
-          </button>
-          <Link
-            href="/dashboard"
-            className="rounded-lg bg-forge py-3 font-bold text-neutral-950 transition hover:bg-forge-soft"
-          >
-            Back to dashboard
-          </Link>
+          <p className="mt-3 text-lg font-bold">
+            🔥 {result.streak} day streak
+          </p>
+
+          {result.leveledUp && (
+            <div className="celebrate-pop mt-6 rounded-xl border border-forge/40 bg-forge/10 p-4">
+              <p className="text-lg font-black">⬆️ Level {result.level}!</p>
+              {result.rankChanged && (
+                <p className="mt-1 font-semibold text-forge">New rank: {result.rank}</p>
+              )}
+            </div>
+          )}
+
+          {result.unlocked.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {result.unlocked.map((a) => (
+                <div
+                  key={a.key}
+                  className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-3"
+                >
+                  <p className="font-bold">
+                    {a.icon} Achievement unlocked: {a.name}
+                  </p>
+                  <p className="text-sm text-yellow-300/90">+{a.xpReward} XP</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-8 flex flex-col gap-3">
+            <button
+              onClick={reset}
+              className="press rounded-lg border border-neutral-800 py-3 font-bold transition hover:border-neutral-600"
+            >
+              Log another
+            </button>
+            <Link
+              href="/dashboard"
+              className="press rounded-lg bg-forge py-3 font-bold text-neutral-950 transition hover:bg-forge-soft"
+            >
+              Back to dashboard
+            </Link>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -228,7 +242,7 @@ export default function WorkoutForm() {
       <button
         type="submit"
         disabled={busy}
-        className="w-full rounded-lg bg-forge py-4 text-lg font-black text-neutral-950 transition hover:bg-forge-soft disabled:opacity-50"
+        className="press w-full rounded-lg bg-forge py-4 text-lg font-black text-neutral-950 transition hover:bg-forge-soft disabled:opacity-50"
       >
         {busy ? "Saving…" : "Complete workout"}
       </button>
