@@ -15,14 +15,24 @@ export type Profile = {
   created_at: string;
 };
 
+// An achievement the user just unlocked.
+export type UnlockedAchievement = {
+  key: string;
+  name: string;
+  icon: string;
+  xpReward: number;
+};
+
 // The result of logging a workout (shared between the server action and the UI).
 export type WorkoutResult =
   | { ok: false; error: string }
   | {
       ok: true;
-      xpEarned: number;
+      xpEarned: number; // workout XP + streak bonus + achievement XP
+      streak: number;
       leveledUp: boolean;
       level: number;
       rank: string;
       rankChanged: boolean;
+      unlocked: UnlockedAchievement[];
     };

@@ -78,7 +78,10 @@ If all four work, Phase 1 is done. ✅
 - [x] **Phase 3** — Workout logging: pick a type (Push/Pull/Legs/Full/Custom),
   enter duration + difficulty + notes; completing it awards real XP (100 + a
   difficulty bonus), records the workout, and bumps total workouts.
-- [ ] **Phase 4** — Streaks + achievements.
+- [x] **Phase 4** — Streaks + achievements: daily streak that grows on
+  consecutive-day workouts (bonus XP at each 7-day milestone) and resets on a
+  miss; auto-unlocking achievement badges (First Workout, 7 Day Warrior, 30 Day
+  Beast, Century, Level 10/50) shown on an Achievements page.
 - [ ] **Phase 5** — Waitlist landing page + referrals.
 - [ ] **Phase 6** — Admin dashboard.
 - [ ] **Phase 7** — UI polish + animations.

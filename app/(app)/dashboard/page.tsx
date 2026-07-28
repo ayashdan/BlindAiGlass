@@ -85,8 +85,17 @@ export default async function Dashboard() {
         <Stat label="Workouts" value={`${profile.total_workouts}`} />
       </section>
 
+      {/* Achievements */}
+      <Link
+        href="/achievements"
+        className="mt-4 flex items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900 px-5 py-4 transition hover:border-neutral-600"
+      >
+        <span className="font-bold">🏅 Achievements</span>
+        <span className="text-neutral-400">View →</span>
+      </Link>
+
       <p className="mt-8 text-center text-sm text-neutral-500">
-        Streaks, daily quests, and achievements arrive in the next phases.
+        Daily quests arrive in the next phase.
       </p>
     </main>
   );

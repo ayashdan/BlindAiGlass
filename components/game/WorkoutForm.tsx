@@ -82,12 +82,32 @@ export default function WorkoutForm() {
         </p>
         <p className="mt-2 text-4xl font-black text-forge">+{result.xpEarned} XP</p>
 
+        <p className="mt-3 text-lg font-bold">
+          🔥 {result.streak} day streak
+        </p>
+
         {result.leveledUp && (
           <div className="mt-6 rounded-xl border border-forge/40 bg-forge/10 p-4">
-            <p className="text-lg font-black">🔥 Level {result.level}!</p>
+            <p className="text-lg font-black">⬆️ Level {result.level}!</p>
             {result.rankChanged && (
               <p className="mt-1 font-semibold text-forge">New rank: {result.rank}</p>
             )}
+          </div>
+        )}
+
+        {result.unlocked.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {result.unlocked.map((a) => (
+              <div
+                key={a.key}
+                className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-3"
+              >
+                <p className="font-bold">
+                  {a.icon} Achievement unlocked: {a.name}
+                </p>
+                <p className="text-sm text-yellow-300/90">+{a.xpReward} XP</p>
+              </div>
+            ))}
           </div>
         )}
 

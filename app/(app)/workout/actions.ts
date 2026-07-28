@@ -5,6 +5,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { applyXp } from "@/lib/game/xp-server";
+import { checkAndAwardAchievements } from "@/lib/game/achievements-server";
 import type { WorkoutResult } from "@/lib/types";
 
 const VALID_TYPES = ["push", "pull", "legs", "full", "custom"];
@@ -57,27 +58,80 @@ export async function logWorkout(input: {
   });
   if (insErr) return { ok: false, error: "Could not save the workout." };
 
-  // ---- Bump total workouts ----
+  // ---- Read current profile stats ----
   const { data: prof } = await supabase
     .from("profiles")
-    .select("total_workouts")
+    .select("total_workouts, current_streak, longest_streak, last_workout_date")
     .eq("id", user.id)
     .single();
+
+  const prevWorkouts = prof?.total_workouts ?? 0;
+  const prevStreak = prof?.current_streak ?? 0;
+  const prevLongest = prof?.longest_streak ?? 0;
+  const lastDate = (prof?.last_workout_date as string | null) ?? null;
+
+  // ---- Streak logic (UTC dates) ----
+  // Worked out today already -> streak unchanged. Worked out yesterday -> +1.
+  // Otherwise the streak resets to 1.
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const yesterdayStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
+
+  const advancedToday = lastDate !== todayStr;
+  let newStreak: number;
+  if (lastDate === todayStr) newStreak = prevStreak;
+  else if (lastDate === yesterdayStr) newStreak = prevStreak + 1;
+  else newStreak = 1;
+  const newLongest = Math.max(prevLongest, newStreak);
+
+  const newWorkouts = prevWorkouts + 1;
+
   await supabase
     .from("profiles")
-    .update({ total_workouts: (prof?.total_workouts ?? 0) + 1 })
+    .update({
+      total_workouts: newWorkouts,
+      current_streak: newStreak,
+      longest_streak: newLongest,
+      last_workout_date: todayStr,
+    })
     .eq("id", user.id);
 
-  // ---- Award XP (recalculates level + rank server-side) ----
-  const xp = await applyXp(xpEarned);
+  // ---- Bonus XP when the streak advances into a multiple of 7 days ----
+  const streakBonus = advancedToday && newStreak > 0 && newStreak % 7 === 0 ? 50 : 0;
+
+  // ---- Award workout XP (+ streak bonus), recalculating level + rank ----
+  const xp1 = await applyXp(xpEarned + streakBonus);
+
+  // ---- Check achievements against the fresh stats ----
+  const ach = await checkAndAwardAchievements({
+    totalWorkouts: newWorkouts,
+    currentStreak: newStreak,
+    level: xp1.level,
+  });
+
+  // ---- Award any achievement bonus XP (can trigger another level-up) ----
+  let level = xp1.level;
+  let rank = xp1.rank;
+  let leveledUp = xp1.leveledUp;
+  let rankChanged = xp1.rankChanged;
+  if (ach.xpAwarded > 0) {
+    const xp2 = await applyXp(ach.xpAwarded);
+    level = xp2.level;
+    rank = xp2.rank;
+    leveledUp = leveledUp || xp2.leveledUp;
+    rankChanged = rankChanged || xp2.rankChanged;
+  }
 
   revalidatePath("/dashboard");
+  revalidatePath("/achievements");
   return {
     ok: true,
-    xpEarned,
-    leveledUp: xp.leveledUp,
-    level: xp.level,
-    rank: xp.rank,
-    rankChanged: xp.rankChanged,
+    xpEarned: xpEarned + streakBonus + ach.xpAwarded,
+    streak: newStreak,
+    leveledUp,
+    level,
+    rank,
+    rankChanged,
+    unlocked: ach.unlocked,
   };
 }
