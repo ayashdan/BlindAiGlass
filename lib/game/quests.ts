@@ -6,7 +6,7 @@
 
 export type QuestStats = {
   workoutsToday: number;
-  typesToday: string[]; // workout types logged today (e.g. "push", "legs")
+  muscleGroupsToday: string[]; // muscle groups trained today (e.g. "chest", "quads")
   maxDurationToday: number; // longest single workout today, in minutes
   hardToday: boolean; // any "hard" difficulty workout today
 };
@@ -32,26 +32,27 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
   {
     key: "push_day",
     title: "Push Day",
-    description: "Complete a Push workout.",
+    description: "Train chest, shoulders, or triceps.",
     icon: "💪",
     xpReward: 25,
-    check: (s) => s.typesToday.includes("push"),
+    check: (s) => ["chest", "shoulders", "triceps"].some((g) => s.muscleGroupsToday.includes(g)),
   },
   {
     key: "pull_day",
     title: "Pull Day",
-    description: "Complete a Pull workout.",
+    description: "Train back or biceps.",
     icon: "🏋️",
     xpReward: 25,
-    check: (s) => s.typesToday.includes("pull"),
+    check: (s) => ["back", "biceps"].some((g) => s.muscleGroupsToday.includes(g)),
   },
   {
     key: "leg_day",
     title: "Leg Day",
-    description: "Complete a Legs workout.",
+    description: "Train quads, hamstrings, glutes, or calves.",
     icon: "🦵",
     xpReward: 25,
-    check: (s) => s.typesToday.includes("legs"),
+    check: (s) =>
+      ["quads", "hamstrings", "glutes", "calves"].some((g) => s.muscleGroupsToday.includes(g)),
   },
   {
     key: "endurance",

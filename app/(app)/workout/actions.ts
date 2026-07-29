@@ -7,15 +7,15 @@ import { createClient } from "@/lib/supabase/server";
 import { applyXp } from "@/lib/game/xp-server";
 import { checkAndAwardAchievements } from "@/lib/game/achievements-server";
 import { checkAndCompleteQuests } from "@/lib/game/quests-server";
+import { VALID_MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
 import type { WorkoutResult } from "@/lib/types";
 
-const VALID_TYPES = ["push", "pull", "legs", "full", "custom"];
 // Completing a workout is worth a base 100 XP, plus a bonus for difficulty.
 const BASE_XP = 100;
 const DIFFICULTY_BONUS: Record<string, number> = { easy: 0, medium: 25, hard: 50 };
 
 export async function logWorkout(input: {
-  type: string;
+  muscleGroups: string[];
   customName?: string;
   duration: number;
   difficulty: string;
@@ -28,21 +28,21 @@ export async function logWorkout(input: {
   if (!user) return { ok: false, error: "You are not logged in." };
 
   // ---- Validate the input ----
-  const type = input.type;
+  const muscleGroups = Array.from(new Set(input.muscleGroups ?? [])).filter((g) =>
+    VALID_MUSCLE_GROUPS.includes(g)
+  );
+  const customName = (input.customName || "").trim().slice(0, 60) || null;
   const difficulty = input.difficulty;
   const duration = Math.round(Number(input.duration));
 
-  if (!VALID_TYPES.includes(type)) return { ok: false, error: "Pick a workout type." };
+  if (muscleGroups.length === 0 && !customName) {
+    return { ok: false, error: "Pick at least one muscle group, or name the workout." };
+  }
   if (!(difficulty in DIFFICULTY_BONUS)) return { ok: false, error: "Pick a difficulty." };
   if (!Number.isFinite(duration) || duration <= 0 || duration > 600) {
     return { ok: false, error: "Enter a duration between 1 and 600 minutes." };
   }
 
-  const customName =
-    type === "custom" ? (input.customName || "").trim().slice(0, 60) : null;
-  if (type === "custom" && !customName) {
-    return { ok: false, error: "Give your custom workout a name." };
-  }
   const notes = (input.notes || "").trim().slice(0, 500) || null;
 
   const xpEarned = BASE_XP + DIFFICULTY_BONUS[difficulty];
@@ -50,7 +50,7 @@ export async function logWorkout(input: {
   // ---- Save the workout ----
   const { error: insErr } = await supabase.from("workouts").insert({
     user_id: user.id,
-    type,
+    muscle_groups: muscleGroups,
     custom_name: customName,
     duration_minutes: duration,
     difficulty,
@@ -114,13 +114,13 @@ export async function logWorkout(input: {
   const todayStart = `${todayStr}T00:00:00.000Z`;
   const { data: todaysWorkouts } = await supabase
     .from("workouts")
-    .select("type, duration_minutes, difficulty")
+    .select("muscle_groups, duration_minutes, difficulty")
     .eq("user_id", user.id)
     .gte("created_at", todayStart);
   const rows = todaysWorkouts ?? [];
   const quest = await checkAndCompleteQuests({
     workoutsToday: rows.length,
-    typesToday: rows.map((r: any) => r.type as string),
+    muscleGroupsToday: rows.flatMap((r: any) => (r.muscle_groups as string[]) ?? []),
     maxDurationToday: rows.reduce((m: number, r: any) => Math.max(m, r.duration_minutes ?? 0), 0),
     hardToday: rows.some((r: any) => r.difficulty === "hard"),
   });

@@ -133,6 +133,17 @@ Run `supabase/migrations/0006_quests.sql` in Supabase SQL Editor (SQL Editor
 3. Come back tomorrow (or change your system clock forward a day for
    testing) — you should get a fresh set of 3 quests.
 
+### Muscle-group workout logging
+Logging a workout no longer forces a single Push/Pull/Legs pick — you now
+multi-select any combination of 13 muscle groups (Chest, Back, Shoulders,
+Biceps, Triceps, Forearms, Abs/Core, Quads, Hamstrings, Glutes, Calves, Full
+Body, Cardio), plus an optional workout name. The "Push/Pull/Leg Day" quests
+now trigger off matching muscle groups (e.g. Chest/Shoulders/Triceps counts
+as Push Day) instead of a single fixed type.
+
+**Setup:** run `supabase/migrations/0007_muscle_groups.sql` in Supabase SQL
+Editor.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:

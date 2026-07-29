@@ -6,15 +6,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { logWorkout } from "@/app/(app)/workout/actions";
 import AchievementCelebration from "./AchievementCelebration";
+import { MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
 import type { WorkoutResult } from "@/lib/types";
-
-const TYPES = [
-  { key: "push", label: "Push" },
-  { key: "pull", label: "Pull" },
-  { key: "legs", label: "Legs" },
-  { key: "full", label: "Full Body" },
-  { key: "custom", label: "Custom" },
-];
 
 const DIFFICULTIES = [
   { key: "easy", label: "Easy" },
@@ -23,7 +16,7 @@ const DIFFICULTIES = [
 ];
 
 export default function WorkoutForm() {
-  const [type, setType] = useState("push");
+  const [muscleGroups, setMuscleGroups] = useState<string[]>([]);
   const [customName, setCustomName] = useState("");
   const [duration, setDuration] = useState("");
   const [difficulty, setDifficulty] = useState("medium");
@@ -32,6 +25,12 @@ export default function WorkoutForm() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Extract<WorkoutResult, { ok: true }> | null>(null);
   const [celebrating, setCelebrating] = useState(false);
+
+  function toggleGroup(key: string) {
+    setMuscleGroups((prev) =>
+      prev.includes(key) ? prev.filter((g) => g !== key) : [...prev, key]
+    );
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,14 +49,14 @@ export default function WorkoutForm() {
       setError("Enter how many minutes you worked out.");
       return null;
     }
-    if (type === "custom" && !customName.trim()) {
-      setError("Give your custom workout a name.");
+    if (muscleGroups.length === 0 && !customName.trim()) {
+      setError("Pick at least one muscle group, or name the workout.");
       return null;
     }
     setBusy(true);
     try {
       const res = await logWorkout({
-        type,
+        muscleGroups,
         customName: customName.trim(),
         duration: mins,
         difficulty,
@@ -75,6 +74,7 @@ export default function WorkoutForm() {
     setDuration("");
     setNotes("");
     setCustomName("");
+    setMuscleGroups([]);
   }
 
   // ---- Reward screen ----
@@ -169,35 +169,39 @@ export default function WorkoutForm() {
         </p>
       )}
 
-      {/* Workout type */}
+      {/* Muscle groups (multi-select) */}
       <div>
-        <label className="mb-2 block text-sm font-semibold text-neutral-300">Type</label>
+        <label className="mb-2 block text-sm font-semibold text-neutral-300">
+          Muscle groups worked
+        </label>
+        <p className="mb-2 text-xs text-neutral-500">Tap all that apply.</p>
         <div className="grid grid-cols-3 gap-2">
-          {TYPES.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setType(t.key)}
-              aria-pressed={type === t.key}
-              className={
-                "rounded-lg border py-3 text-sm font-bold transition " +
-                (type === t.key
-                  ? "border-forge bg-forge/15 text-forge"
-                  : "border-neutral-800 bg-neutral-900 text-neutral-300 hover:border-neutral-600")
-              }
-            >
-              {t.label}
-            </button>
-          ))}
+          {MUSCLE_GROUPS.map((g) => {
+            const active = muscleGroups.includes(g.key);
+            return (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => toggleGroup(g.key)}
+                aria-pressed={active}
+                className={
+                  "press rounded-lg border py-3 text-sm font-bold transition " +
+                  (active
+                    ? "border-forge bg-forge/15 text-forge"
+                    : "border-neutral-800 bg-neutral-900 text-neutral-300 hover:border-neutral-600")
+                }
+              >
+                {g.label}
+              </button>
+            );
+          })}
         </div>
-        {type === "custom" && (
-          <input
-            value={customName}
-            onChange={(e) => setCustomName(e.target.value)}
-            placeholder="Name your workout (e.g. Boxing)"
-            className="mt-3 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
-          />
-        )}
+        <input
+          value={customName}
+          onChange={(e) => setCustomName(e.target.value)}
+          placeholder="Workout name (optional, e.g. Boxing)"
+          className="mt-3 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+        />
       </div>
 
       {/* Duration */}
