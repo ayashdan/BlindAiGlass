@@ -22,6 +22,10 @@ export type QuestTemplate = {
   // water tracker in a web app) — the user self-reports by tapping a button.
   kind: "workout" | "manual";
   check: (s: QuestStats) => boolean; // unused for "manual" quests
+  // Quests sharing a group are mutually exclusive within a single day's
+  // picks — e.g. Push/Pull/Leg Day all belong to "split" so you never get
+  // two different splits assigned on a day you're only doing one workout.
+  group?: string;
 };
 
 export const QUEST_TEMPLATES: QuestTemplate[] = [
@@ -41,6 +45,7 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     icon: "💪",
     xpReward: 25,
     kind: "workout",
+    group: "split",
     check: (s) => ["chest", "shoulders", "triceps"].some((g) => s.muscleGroupsToday.includes(g)),
   },
   {
@@ -50,6 +55,7 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     icon: "🏋️",
     xpReward: 25,
     kind: "workout",
+    group: "split",
     check: (s) => ["back", "biceps"].some((g) => s.muscleGroupsToday.includes(g)),
   },
   {
@@ -59,6 +65,7 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     icon: "🦵",
     xpReward: 25,
     kind: "workout",
+    group: "split",
     check: (s) =>
       ["quads", "hamstrings", "glutes", "calves"].some((g) => s.muscleGroupsToday.includes(g)),
   },
@@ -79,15 +86,6 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     xpReward: 35,
     kind: "workout",
     check: (s) => s.hardToday,
-  },
-  {
-    key: "double_up",
-    title: "Double Up",
-    description: "Complete 2 workouts today.",
-    icon: "2️⃣",
-    xpReward: 40,
-    kind: "workout",
-    check: (s) => s.workoutsToday >= 2,
   },
   {
     key: "stretch",
@@ -131,17 +129,23 @@ export const QUESTS_PER_DAY = 3;
 
 // Picks QUESTS_PER_DAY template keys, seeded so the same (user, date) pair
 // always gets the same set — no reshuffling if this runs more than once
-// before the DB rows are created.
+// before the DB rows are created. Never picks two templates from the same
+// `group` (e.g. two different splits) on the same day.
 export function pickDailyQuestKeys(seed: string): string[] {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
 
-  const pool = QUEST_TEMPLATES.map((q) => q.key);
+  const pool = QUEST_TEMPLATES.slice();
   const picked: string[] = [];
-  for (let i = 0; i < QUESTS_PER_DAY && pool.length > 0; i++) {
+  const usedGroups = new Set<string>();
+
+  while (picked.length < QUESTS_PER_DAY && pool.length > 0) {
     h = (h * 1103515245 + 12345) >>> 0;
     const idx = h % pool.length;
-    picked.push(pool.splice(idx, 1)[0]);
+    const candidate = pool.splice(idx, 1)[0];
+    if (candidate.group && usedGroups.has(candidate.group)) continue;
+    picked.push(candidate.key);
+    if (candidate.group) usedGroups.add(candidate.group);
   }
   return picked;
 }
