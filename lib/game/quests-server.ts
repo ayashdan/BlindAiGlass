@@ -10,6 +10,7 @@ export type DailyQuestView = {
   icon: string;
   xpReward: number;
   completed: boolean;
+  kind: "workout" | "manual";
 };
 
 export type CompletedQuest = { key: string; title: string; icon: string; xpReward: number };
@@ -66,6 +67,7 @@ export async function ensureTodayQuests(): Promise<DailyQuestView[]> {
         icon: tmpl.icon,
         xpReward: r.xp_reward,
         completed: r.completed,
+        kind: tmpl.kind,
       };
     })
     .filter((v): v is DailyQuestView => v !== null);
@@ -94,7 +96,7 @@ export async function checkAndCompleteQuests(
   for (const row of rows ?? []) {
     if (row.completed) continue;
     const tmpl = QUEST_TEMPLATES.find((q) => q.key === row.quest_key);
-    if (!tmpl || !tmpl.check(stats)) continue;
+    if (!tmpl || tmpl.kind !== "workout" || !tmpl.check(stats)) continue;
 
     const { error } = await supabase
       .from("daily_quests")
@@ -107,4 +109,40 @@ export async function checkAndCompleteQuests(
 
   const xpAwarded = completed.reduce((sum, c) => sum + c.xpReward, 0);
   return { completed, xpAwarded };
+}
+
+// Marks a "manual" (self-reported) quest complete when the user taps its
+// "Mark done" button — there's no workout data to verify these against.
+export async function completeManualQuest(
+  key: string
+): Promise<{ quest: CompletedQuest | null; xpAwarded: number }> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { quest: null, xpAwarded: 0 };
+
+  const tmpl = QUEST_TEMPLATES.find((q) => q.key === key && q.kind === "manual");
+  if (!tmpl) return { quest: null, xpAwarded: 0 };
+
+  const date = todayStr();
+  const { data: row } = await supabase
+    .from("daily_quests")
+    .select("id, completed, xp_reward")
+    .eq("user_id", user.id)
+    .eq("quest_date", date)
+    .eq("quest_key", key)
+    .maybeSingle();
+  if (!row || row.completed) return { quest: null, xpAwarded: 0 };
+
+  const { error } = await supabase
+    .from("daily_quests")
+    .update({ completed: true, completed_at: new Date().toISOString() })
+    .eq("id", row.id);
+  if (error) return { quest: null, xpAwarded: 0 };
+
+  return {
+    quest: { key: tmpl.key, title: tmpl.title, icon: tmpl.icon, xpReward: row.xp_reward },
+    xpAwarded: row.xp_reward,
+  };
 }

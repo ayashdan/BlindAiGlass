@@ -154,6 +154,41 @@ Editor.
 
 Both are linked from the dashboard.
 
+### Retention systems (Tier S + A from the game-design roadmap)
+
+**Setup:** run these three migrations in order, in Supabase SQL Editor:
+`0008_streak_freeze.sql`, `0009_personal_records.sql`, `0010_achievements_v2.sql`.
+
+- **Streak freeze (earned, not purchased)** — you bank 1 automatically every
+  time your streak hits a multiple of 7 days, capped at 2 banked at once. If
+  you miss exactly one day, a banked freeze auto-protects your streak
+  instead of resetting it to 1 (shown on the workout reward screen: "🧊
+  Streak freeze used"). This is the single highest-leverage fix for
+  week-one churn — losing a streak is the #1 reason people abandon habit
+  apps.
+- **Profile page** (`/profile`, linked from the dashboard and by tapping
+  your name/avatar) — pick from 12 emoji avatars, see your stat card, and a
+  trophy-case grid of unlocked achievements. Your avatar now also shows on
+  the dashboard header and the leaderboard.
+- **Personal records** — the app now tracks your longest workout, both
+  overall and per muscle group. Beating a *previous* best (not just your
+  first-ever entry in a category) shows a "🏆 New PR" card on the reward
+  screen and awards bonus XP. This gives you a progress axis that keeps
+  climbing even during a rough streak week.
+- **Denser achievement catalog** — added Getting Started (3 workouts),
+  Level 25, New Best (first PR), and Well Rounded (5 different muscle
+  groups), closing the old dead zones between milestones. 10 achievements
+  total now.
+- **Broader daily quests** — 4 new self-reported quests (Stretch, Hydrate,
+  Rest Up, Get Moving/steps) alongside the 7 workout-based ones. These
+  can't be auto-verified (no pedometer access in a web app), so they show
+  a **"Mark done"** button instead — gives you a reason to open Forge even
+  on rest days.
+- **Workout history heatmap** — `/history` now shows a GitHub-style
+  contribution heatmap of the last 14 weeks above your workout list.
+- **Leaderboard + history** — from the previous update, now joined by
+  Profile in a 3-tile row on the dashboard.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:

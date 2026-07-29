@@ -2,8 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
+import WorkoutHeatmap from "@/components/game/WorkoutHeatmap";
 
 const PAGE_SIZE = 30;
+const HEATMAP_WEEKS = 14;
 
 // A read-only list of your past workouts, newest first.
 export default async function HistoryPage() {
@@ -23,6 +25,20 @@ export default async function HistoryPage() {
   const workouts = (data ?? []) as any[];
   const labelFor = (key: string) => MUSCLE_GROUPS.find((g) => g.key === key)?.label ?? key;
 
+  // Heatmap covers a wider window than the list above, so fetch separately.
+  const since = new Date(Date.now() - (HEATMAP_WEEKS * 7 - 1) * 86400000).toISOString();
+  const { data: recent } = await supabase
+    .from("workouts")
+    .select("created_at")
+    .eq("user_id", user.id)
+    .gte("created_at", since);
+
+  const counts: Record<string, number> = {};
+  for (const w of recent ?? []) {
+    const key = new Date(w.created_at).toISOString().slice(0, 10);
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
       <Link href="/dashboard" className="text-sm text-neutral-400 hover:text-neutral-200">
@@ -32,6 +48,13 @@ export default async function HistoryPage() {
       <p className="mb-6 text-sm text-neutral-400">
         Your last {workouts.length} workout{workouts.length === 1 ? "" : "s"}.
       </p>
+
+      <section className="fade-in-up mb-6 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+        <p className="mb-3 text-sm font-black uppercase tracking-wide text-neutral-400">
+          Last {HEATMAP_WEEKS} weeks
+        </p>
+        <WorkoutHeatmap counts={counts} weeks={HEATMAP_WEEKS} />
+      </section>
 
       <div className="space-y-3">
         {workouts.map((w, i) => (

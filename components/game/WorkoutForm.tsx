@@ -99,6 +99,34 @@ export default function WorkoutForm() {
             🔥 {result.streak} day streak
           </p>
 
+          {result.freezeUsed && (
+            <div className="celebrate-pop mt-4 rounded-xl border border-sky-400/40 bg-sky-400/10 p-3">
+              <p className="font-bold text-sky-300">🧊 Streak freeze used — your streak is safe!</p>
+            </div>
+          )}
+          {result.freezeEarned && (
+            <div className="celebrate-pop mt-4 rounded-xl border border-sky-400/40 bg-sky-400/10 p-3">
+              <p className="font-bold text-sky-300">
+                🧊 +1 Streak Freeze earned! ({result.streakFreezes} banked)
+              </p>
+            </div>
+          )}
+
+          {result.newRecords.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {result.newRecords.map((r, i) => (
+                <div
+                  key={r.category}
+                  className="celebrate-pop rounded-xl border border-purple-400/40 bg-purple-400/10 p-3"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                >
+                  <p className="font-bold text-purple-300">🏆 New PR: {r.label}</p>
+                  <p className="text-sm text-purple-200/80">{r.value} minutes</p>
+                </div>
+              ))}
+            </div>
+          )}
+
           {result.leveledUp && (
             <div className="celebrate-pop mt-6 rounded-xl border border-forge/40 bg-forge/10 p-4">
               <p className="text-lg font-black">⬆️ Level {result.level}!</p>

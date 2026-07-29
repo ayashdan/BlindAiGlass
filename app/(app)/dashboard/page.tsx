@@ -5,6 +5,9 @@ import { signOut } from "@/app/(auth)/actions";
 import { levelProgress, rankForLevel } from "@/lib/game/leveling";
 import { isAdminEmail } from "@/lib/admin";
 import { ensureTodayQuests } from "@/lib/game/quests-server";
+import { completeQuest } from "@/app/(app)/quests/actions";
+import { resolveAvatar } from "@/lib/game/avatars";
+import { dailyMotivation } from "@/lib/game/motivation";
 import type { Profile } from "@/lib/types";
 
 // The logged-in home hub. Shows your level/XP/rank and stats, plus the main
@@ -37,14 +40,19 @@ export default async function Dashboard() {
   const progress = levelProgress(profile.xp);
   const rank = rankForLevel(progress.level);
   const quests = await ensureTodayQuests();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const motivation = dailyMotivation(`${user.id}:${todayStr}`);
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
       <header className="mb-8 flex items-center justify-between">
-        <div>
-          <p className="text-sm text-neutral-400">Welcome back,</p>
-          <h1 className="text-2xl font-black tracking-tight">{profile.username}</h1>
-        </div>
+        <Link href="/profile" className="flex items-center gap-3">
+          <span className="text-3xl">{resolveAvatar(profile.avatar)}</span>
+          <div>
+            <p className="text-sm text-neutral-400">Welcome back,</p>
+            <h1 className="text-2xl font-black tracking-tight">{profile.username}</h1>
+          </div>
+        </Link>
         <div className="flex items-center gap-2">
           {isAdminEmail(user.email) && (
             <Link
@@ -61,6 +69,11 @@ export default async function Dashboard() {
           </form>
         </div>
       </header>
+
+      {/* Daily motivational message */}
+      <p className="fade-in-up mb-4 text-center text-sm italic text-neutral-400">
+        "{motivation}"
+      </p>
 
       {/* Level + XP card */}
       <section className="fade-in-up rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
@@ -101,6 +114,12 @@ export default async function Dashboard() {
         <Stat label="Best" value={`${profile.longest_streak}`} />
         <Stat label="Workouts" value={`${profile.total_workouts}`} />
       </section>
+      {profile.streak_freezes > 0 && (
+        <p className="mt-2 text-center text-xs text-sky-300/80">
+          🧊 {profile.streak_freezes} streak freeze{profile.streak_freezes === 1 ? "" : "s"}{" "}
+          banked — protects your streak if you miss a day.
+        </p>
+      )}
 
       {/* Achievements */}
       <Link
@@ -112,22 +131,28 @@ export default async function Dashboard() {
         <span className="text-neutral-400">View →</span>
       </Link>
 
-      {/* Leaderboard + history */}
+      {/* Leaderboard + history + profile */}
       <div
-        className="fade-in-up mt-4 grid grid-cols-2 gap-3"
+        className="fade-in-up mt-4 grid grid-cols-3 gap-3"
         style={{ animationDelay: "0.18s" }}
       >
         <Link
           href="/leaderboard"
-          className="flex flex-col items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-4 text-center transition hover:border-neutral-600"
+          className="flex flex-col items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-2 py-4 text-center transition hover:border-neutral-600"
         >
-          <span className="font-bold">🏆 Leaderboard</span>
+          <span className="text-sm font-bold">🏆 Leaderboard</span>
         </Link>
         <Link
           href="/history"
-          className="flex flex-col items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-4 text-center transition hover:border-neutral-600"
+          className="flex flex-col items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-2 py-4 text-center transition hover:border-neutral-600"
         >
-          <span className="font-bold">📜 History</span>
+          <span className="text-sm font-bold">📜 History</span>
+        </Link>
+        <Link
+          href="/profile"
+          className="flex flex-col items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-2 py-4 text-center transition hover:border-neutral-600"
+        >
+          <span className="text-sm font-bold">👤 Profile</span>
         </Link>
       </div>
 
@@ -163,7 +188,16 @@ export default async function Dashboard() {
                   </p>
                   <p className="text-xs text-neutral-500">{q.description}</p>
                 </div>
-                <span className="text-xs font-semibold text-forge">+{q.xpReward} XP</span>
+                {q.kind === "manual" && !q.completed ? (
+                  <form action={completeQuest}>
+                    <input type="hidden" name="key" value={q.key} />
+                    <button className="press rounded-lg border border-forge/40 px-2 py-1 text-xs font-bold text-forge transition hover:bg-forge/10">
+                      Mark done
+                    </button>
+                  </form>
+                ) : (
+                  <span className="text-xs font-semibold text-forge">+{q.xpReward} XP</span>
+                )}
               </div>
             ))}
           </div>

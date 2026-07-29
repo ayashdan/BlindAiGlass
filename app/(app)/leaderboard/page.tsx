@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { resolveAvatar } from "@/lib/game/avatars";
 
 const PAGE_SIZE = 50;
 
@@ -22,7 +23,7 @@ export default async function LeaderboardPage({
 
   const { data: top } = await supabase
     .from("profiles")
-    .select("id, username, xp, level, rank, current_streak")
+    .select("id, username, avatar, xp, level, rank, current_streak")
     .order(by, { ascending: false })
     .limit(PAGE_SIZE);
 
@@ -99,6 +100,7 @@ export default async function LeaderboardPage({
               style={{ animationDelay: `${Math.min(i, 10) * 0.03}s` }}
             >
               <span className="w-8 text-center font-black text-neutral-500">{medal(i)}</span>
+              <span className="text-xl">{resolveAvatar(u.avatar)}</span>
               <div className="flex-1">
                 <p className="font-bold">
                   {u.username}

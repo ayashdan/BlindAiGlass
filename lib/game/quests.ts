@@ -17,7 +17,11 @@ export type QuestTemplate = {
   description: string;
   icon: string;
   xpReward: number;
-  check: (s: QuestStats) => boolean;
+  // "workout" quests auto-complete by checking today's logged workouts.
+  // "manual" quests can't be verified from workout data (no step counter or
+  // water tracker in a web app) — the user self-reports by tapping a button.
+  kind: "workout" | "manual";
+  check: (s: QuestStats) => boolean; // unused for "manual" quests
 };
 
 export const QUEST_TEMPLATES: QuestTemplate[] = [
@@ -27,6 +31,7 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     description: "Complete any workout today.",
     icon: "✅",
     xpReward: 20,
+    kind: "workout",
     check: (s) => s.workoutsToday >= 1,
   },
   {
@@ -35,6 +40,7 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     description: "Train chest, shoulders, or triceps.",
     icon: "💪",
     xpReward: 25,
+    kind: "workout",
     check: (s) => ["chest", "shoulders", "triceps"].some((g) => s.muscleGroupsToday.includes(g)),
   },
   {
@@ -43,6 +49,7 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     description: "Train back or biceps.",
     icon: "🏋️",
     xpReward: 25,
+    kind: "workout",
     check: (s) => ["back", "biceps"].some((g) => s.muscleGroupsToday.includes(g)),
   },
   {
@@ -51,6 +58,7 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     description: "Train quads, hamstrings, glutes, or calves.",
     icon: "🦵",
     xpReward: 25,
+    kind: "workout",
     check: (s) =>
       ["quads", "hamstrings", "glutes", "calves"].some((g) => s.muscleGroupsToday.includes(g)),
   },
@@ -60,6 +68,7 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     description: "Complete a workout 30+ minutes long.",
     icon: "⏱️",
     xpReward: 30,
+    kind: "workout",
     check: (s) => s.maxDurationToday >= 30,
   },
   {
@@ -68,6 +77,7 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     description: "Complete a Hard difficulty workout.",
     icon: "🔥",
     xpReward: 35,
+    kind: "workout",
     check: (s) => s.hardToday,
   },
   {
@@ -76,7 +86,44 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
     description: "Complete 2 workouts today.",
     icon: "2️⃣",
     xpReward: 40,
+    kind: "workout",
     check: (s) => s.workoutsToday >= 2,
+  },
+  {
+    key: "stretch",
+    title: "Stretch It Out",
+    description: "Stretch or do mobility work for 10 minutes.",
+    icon: "🧘",
+    xpReward: 15,
+    kind: "manual",
+    check: () => false,
+  },
+  {
+    key: "hydrate",
+    title: "Hydrate",
+    description: "Drink enough water today.",
+    icon: "💧",
+    xpReward: 10,
+    kind: "manual",
+    check: () => false,
+  },
+  {
+    key: "sleep_well",
+    title: "Rest Up",
+    description: "Get a good night's sleep.",
+    icon: "😴",
+    xpReward: 10,
+    kind: "manual",
+    check: () => false,
+  },
+  {
+    key: "steps",
+    title: "Get Moving",
+    description: "Walk 8,000+ steps today.",
+    icon: "🚶",
+    xpReward: 15,
+    kind: "manual",
+    check: () => false,
   },
 ];
 

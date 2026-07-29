@@ -13,6 +13,8 @@ export type Profile = {
   last_workout_date: string | null;
   is_admin: boolean;
   created_at: string;
+  streak_freezes: number;
+  trained_muscle_groups: string[];
 };
 
 // An achievement the user just unlocked.
@@ -31,12 +33,20 @@ export type CompletedQuest = {
   xpReward: number;
 };
 
+// A personal record the user just beat (never fires on the first-ever entry
+// in a category — only on genuinely improving past a prior best).
+export type NewRecord = {
+  category: string;
+  label: string;
+  value: number; // minutes
+};
+
 // The result of logging a workout (shared between the server action and the UI).
 export type WorkoutResult =
   | { ok: false; error: string }
   | {
       ok: true;
-      xpEarned: number; // workout XP + streak bonus + achievement XP + quest XP
+      xpEarned: number; // workout + streak + achievement + quest + PR XP
       streak: number;
       leveledUp: boolean;
       level: number;
@@ -44,4 +54,8 @@ export type WorkoutResult =
       rankChanged: boolean;
       unlocked: UnlockedAchievement[];
       questsCompleted: CompletedQuest[];
+      newRecords: NewRecord[];
+      freezeUsed: boolean;
+      freezeEarned: boolean;
+      streakFreezes: number;
     };
