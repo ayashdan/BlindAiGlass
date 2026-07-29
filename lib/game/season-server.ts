@@ -32,19 +32,20 @@ export async function checkAndAwardSeasonTiers(): Promise<{
 
   const { seasonNumber, seasonStartedAt } = await getSeasonConfig(supabase);
 
-  const { count } = await supabase
-    .from("workouts")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("created_at", seasonStartedAt);
-  const workoutsThisSeason = count ?? 0;
-
-  const { data: already } = await supabase
-    .from("season_pass_progress")
-    .select("tier")
-    .eq("user_id", user.id)
-    .eq("season_number", seasonNumber);
-  const claimedTiers = new Set((already ?? []).map((r: any) => r.tier as number));
+  const [workoutsRes, claimedRes] = await Promise.all([
+    supabase
+      .from("workouts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", seasonStartedAt),
+    supabase
+      .from("season_pass_progress")
+      .select("tier")
+      .eq("user_id", user.id)
+      .eq("season_number", seasonNumber),
+  ]);
+  const workoutsThisSeason = workoutsRes.count ?? 0;
+  const claimedTiers = new Set((claimedRes.data ?? []).map((r: any) => r.tier as number));
 
   const reached: SeasonTierReached[] = [];
   for (const t of SEASON_TIERS) {
@@ -75,19 +76,21 @@ export async function getSeasonStatus(): Promise<SeasonStatus | null> {
 
   const { seasonNumber, seasonStartedAt } = await getSeasonConfig(supabase);
 
-  const { count } = await supabase
-    .from("workouts")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("created_at", seasonStartedAt);
-  const workoutsThisSeason = count ?? 0;
-
-  const { data: already } = await supabase
-    .from("season_pass_progress")
-    .select("tier")
-    .eq("user_id", user.id)
-    .eq("season_number", seasonNumber);
-  const claimedTiers = new Set((already ?? []).map((r: any) => r.tier as number));
+  // Independent of each other once we know the season — run together.
+  const [workoutsRes, claimedRes] = await Promise.all([
+    supabase
+      .from("workouts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", seasonStartedAt),
+    supabase
+      .from("season_pass_progress")
+      .select("tier")
+      .eq("user_id", user.id)
+      .eq("season_number", seasonNumber),
+  ]);
+  const workoutsThisSeason = workoutsRes.count ?? 0;
+  const claimedTiers = new Set((claimedRes.data ?? []).map((r: any) => r.tier as number));
 
   const startedMs = new Date(seasonStartedAt).getTime();
   const daysElapsed = Math.floor((Date.now() - startedMs) / 86400000);

@@ -13,6 +13,7 @@ import { getSeasonStatus } from "@/lib/game/season-server";
 import ThemeToggle from "@/components/ThemeToggle";
 import ShareButton from "@/components/ShareButton";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import NotificationOptIn from "@/components/NotificationOptIn";
 import type { Profile } from "@/lib/types";
 
 // The logged-in home hub. Shows your character build, level/XP/rank,
@@ -45,10 +46,20 @@ export default async function Dashboard() {
 
   const progress = levelProgress(profile.xp);
   const rank = rankForLevel(progress.level);
-  const quests = await ensureTodayQuests();
   const todayStr = new Date().toISOString().slice(0, 10);
   const motivation = dailyMotivation(`${user.id}:${todayStr}`);
-  const season = await getSeasonStatus();
+
+  // Independent of each other and of the profile fetch above — run together
+  // instead of one-at-a-time round trips.
+  const [quests, season, friendRowsRes] = await Promise.all([
+    ensureTodayQuests(),
+    getSeasonStatus(),
+    supabase
+      .from("friendships")
+      .select("user_id, friend_id")
+      .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+      .eq("status", "accepted"),
+  ]);
 
   const characterStats = {
     power: profile.stat_power,
@@ -67,12 +78,7 @@ export default async function Dashboard() {
   );
 
   // ---- Rival spotlight: the closest friend ahead of you in XP ----
-  const { data: friendRows } = await supabase
-    .from("friendships")
-    .select("user_id, friend_id")
-    .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-    .eq("status", "accepted");
-  const friendIds = (friendRows ?? []).map((r: any) =>
+  const friendIds = (friendRowsRes.data ?? []).map((r: any) =>
     r.user_id === user.id ? r.friend_id : r.user_id
   );
   let rival: any = null;
@@ -115,6 +121,7 @@ export default async function Dashboard() {
           </div>
         </Link>
         <div className="flex items-center gap-2">
+          <NotificationOptIn />
           <ThemeToggle />
           {isAdminEmail(user.email) && (
             <Link

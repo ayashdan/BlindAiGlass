@@ -305,6 +305,73 @@ What each system does:
   haven't worked out yet today) for a one-shot +10% XP bonus on your next
   workout. Rewards planned rest instead of just not punishing it.
 
+### Streak reminders (push notifications) + faster dashboard
+
+Everything built so far only works once you're already in the app. This
+adds one thing that reaches people who *haven't* opened it: a daily
+reminder if you have an active streak and haven't worked out yet today.
+Free — uses the browser's native Push API, no third-party notification
+service, no per-message cost.
+
+**Migration — run in Supabase SQL Editor:**
+
+**`0018_push_subscriptions.sql`**
+```sql
+create table if not exists public.push_subscriptions (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users on delete cascade,
+  endpoint   text not null unique,
+  p256dh     text not null,
+  auth       text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists push_subscriptions_user_idx on public.push_subscriptions (user_id);
+
+alter table public.push_subscriptions enable row level security;
+
+drop policy if exists "push_subscriptions_select_own" on public.push_subscriptions;
+create policy "push_subscriptions_select_own"
+  on public.push_subscriptions for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "push_subscriptions_insert_own" on public.push_subscriptions;
+create policy "push_subscriptions_insert_own"
+  on public.push_subscriptions for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "push_subscriptions_delete_own" on public.push_subscriptions;
+create policy "push_subscriptions_delete_own"
+  on public.push_subscriptions for delete
+  using (auth.uid() = user_id);
+```
+
+**Env vars to add** (Vercel → Settings → Environment Variables, and your
+`.env.local`):
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` — generate your
+  own pair with `npx web-push generate-vapid-keys` (free, instant, no
+  account needed). Never commit these to the repo — treat
+  `VAPID_PRIVATE_KEY` like a password, env vars only.
+- `CRON_SECRET` = any long random string you make up (e.g. mash your
+  keyboard for 30 characters)
+
+**How it works:** click the 🔔 button on your dashboard header to opt in
+(browser will ask for notification permission). Once a day (8pm UTC — edit
+the schedule in `vercel.json` if you want a different time), Vercel Cron
+hits `/api/cron/streak-reminder`, which notifies everyone with an active
+streak who hasn't logged a workout yet that day. Requires redeploying
+after adding the env vars for the cron to actually be registered.
+
+**To test:** enable notifications on your dashboard, then visit
+`/api/cron/streak-reminder` directly in a new tab with the header
+`Authorization: Bearer <your CRON_SECRET>` (use a tool like Postman, or
+just trust the daily schedule) — you should get a push notification if
+you have an active streak and haven't worked out today.
+
+**Also in this update:** the dashboard now fires several independent
+Supabase queries in parallel (quests, season status, friends) instead of
+one-at-a-time — same data, faster page load, no visible change.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:
