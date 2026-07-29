@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { setLaunched } from "./actions";
+import { setLaunched, startNewSeason } from "./actions";
 
 // The one switch that matters pre-launch: flips public sign-up on/off.
 // While off, app/(auth)/actions.ts blocks everyone but the admin from
@@ -8,10 +8,12 @@ export default async function AdminSettings() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("app_settings")
-    .select("value")
-    .eq("key", "launched")
-    .maybeSingle();
-  const launched = data?.value === "true";
+    .select("key, value")
+    .in("key", ["launched", "season_number", "season_started_at"]);
+  const map = new Map((data ?? []).map((r: any) => [r.key as string, r.value as string]));
+  const launched = map.get("launched") === "true";
+  const seasonNumber = map.get("season_number") ?? "1";
+  const seasonStartedAt = map.get("season_started_at");
 
   return (
     <div>
@@ -41,6 +43,22 @@ export default async function AdminSettings() {
             }
           >
             {launched ? "Close sign-ups (back to waitlist-only)" : "🚀 Launch Forge"}
+          </button>
+        </form>
+      </div>
+
+      <h2 className="mb-4 mt-8 text-lg font-black">Season</h2>
+      <div className="rounded-xl border border-line bg-surface p-6">
+        <p className="mb-1 font-bold">Season {seasonNumber}</p>
+        <p className="mb-4 text-sm text-muted">
+          Started{" "}
+          {seasonStartedAt ? new Date(seasonStartedAt).toLocaleDateString() : "—"}. Starting a
+          new season doesn't touch anyone's XP, level, or stats — it only
+          resets the season-pass workout-count track on the dashboard.
+        </p>
+        <form action={startNewSeason}>
+          <button className="rounded-lg border border-line px-4 py-2 font-bold text-fg transition hover:border-forge/50">
+            Start Season {parseInt(seasonNumber, 10) + 1}
           </button>
         </form>
       </div>

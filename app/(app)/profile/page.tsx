@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { levelProgress, rankForLevel, MAX_LEVEL } from "@/lib/game/leveling";
 import { AVATARS, resolveAvatar } from "@/lib/game/avatars";
-import { updateAvatar, uploadAvatarPhoto, removeAvatarPhoto, prestige } from "./actions";
+import { updateAvatar, uploadAvatarPhoto, removeAvatarPhoto, prestige, equipCosmetic } from "./actions";
+import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
+import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import ShareButton from "@/components/ShareButton";
 import type { Profile } from "@/lib/types";
@@ -39,6 +41,27 @@ export default async function ProfilePage() {
   const rank = rankForLevel(progress.level);
   const avatar = resolveAvatar(profile.avatar);
 
+  const characterStats = {
+    power: profile.stat_power,
+    grit: profile.stat_grit,
+    endurance: profile.stat_endurance,
+    discipline: profile.stat_discipline,
+  };
+  const charClass = deriveClass(characterStats);
+  const classInfo = CLASS_INFO[charClass];
+  const maxStat = Math.max(
+    1,
+    characterStats.power,
+    characterStats.grit,
+    characterStats.endurance,
+    characterStats.discipline
+  );
+
+  const unlockedKeys = new Set(unlocked.map((a: any) => a.key as string));
+  const unlockedCosmetics = Array.from(unlockedKeys)
+    .map((k) => ({ key: k, ...ACHIEVEMENT_COSMETICS[k] }))
+    .filter((c) => c.border || c.title);
+
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
       <Link href="/dashboard" className="text-sm text-muted hover:text-fg">
@@ -48,15 +71,26 @@ export default async function ProfilePage() {
       {/* Identity card */}
       <section className="fade-in-up mt-3 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6 text-center">
         <div className="flex justify-center">
-          <AvatarDisplay avatarUrl={profile.avatar_url} avatar={profile.avatar} size={80} />
+          <AvatarDisplay
+            avatarUrl={profile.avatar_url}
+            avatar={profile.avatar}
+            borderClass={profile.equipped_border}
+            size={80}
+          />
         </div>
         <h1 className="mt-3 text-2xl font-black tracking-tight">
           {profile.prestige > 0 && <span className="mr-1 text-amber-400">⭐×{profile.prestige}</span>}
           {profile.username}
         </h1>
+        {profile.equipped_title && (
+          <p className="mt-0.5 text-sm text-muted">"{profile.equipped_title}"</p>
+        )}
         <span className="mt-2 inline-block rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
           {rank} · Level {progress.level}
         </span>
+        <p className="mt-2 text-sm text-muted">
+          {classInfo.icon} <span className="font-bold">{charClass}</span> — {classInfo.blurb}
+        </p>
         <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-surface2">
           <div
             className="h-full rounded-full bg-gradient-to-r from-forge to-amber-400 transition-all duration-700 ease-out"
@@ -144,6 +178,118 @@ export default async function ProfilePage() {
         </div>
       </section>
 
+      {/* Character sheet */}
+      <section
+        className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
+        style={{ animationDelay: "0.07s" }}
+      >
+        <p className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
+          {classInfo.icon} Character sheet
+        </p>
+        <div className="space-y-3">
+          <StatBar label="Power" icon="🔥" value={characterStats.power} max={maxStat} color="bg-rose-500" />
+          <StatBar label="Grit" icon="🗡️" value={characterStats.grit} max={maxStat} color="bg-sky-500" />
+          <StatBar
+            label="Endurance"
+            icon="🏃"
+            value={characterStats.endurance}
+            max={maxStat}
+            color="bg-emerald-500"
+          />
+          <StatBar
+            label="Discipline"
+            icon="🧠"
+            value={characterStats.discipline}
+            max={maxStat}
+            color="bg-violet-500"
+          />
+        </div>
+      </section>
+
+      {/* Cosmetics */}
+      {unlockedCosmetics.length > 0 && (
+        <section
+          className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
+          style={{ animationDelay: "0.09s" }}
+        >
+          <p className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
+            Unlocked cosmetics
+          </p>
+          <p className="mb-3 text-xs text-muted">
+            Earned from achievements — nothing here is random or purchasable.
+          </p>
+
+          {unlockedCosmetics.some((c) => c.title) && (
+            <div className="mb-3">
+              <p className="mb-1.5 text-xs font-semibold text-muted">Title</p>
+              <div className="flex flex-wrap gap-2">
+                <form action={equipCosmetic}>
+                  <input type="hidden" name="title" value="" />
+                  <button
+                    className={
+                      "press rounded-lg border px-3 py-1.5 text-xs font-bold transition " +
+                      (!profile.equipped_title
+                        ? "border-forge bg-forge/15 text-forge"
+                        : "border-line text-muted hover:border-forge/50")
+                    }
+                  >
+                    None
+                  </button>
+                </form>
+                {unlockedCosmetics
+                  .filter((c) => c.title)
+                  .map((c) => (
+                    <form key={c.key} action={equipCosmetic}>
+                      <input type="hidden" name="title" value={c.title} />
+                      <button
+                        className={
+                          "press rounded-lg border px-3 py-1.5 text-xs font-bold transition " +
+                          (profile.equipped_title === c.title
+                            ? "border-forge bg-forge/15 text-forge"
+                            : "border-line text-fg hover:border-forge/50")
+                        }
+                      >
+                        {c.title}
+                      </button>
+                    </form>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {unlockedCosmetics.some((c) => c.border) && (
+            <div>
+              <p className="mb-1.5 text-xs font-semibold text-muted">Avatar border</p>
+              <div className="flex flex-wrap gap-2">
+                <form action={equipCosmetic}>
+                  <input type="hidden" name="border" value="" />
+                  <button
+                    className={
+                      "press h-9 w-9 rounded-full border-2 transition " +
+                      (!profile.equipped_border ? "border-forge" : "border-line")
+                    }
+                  >
+                    ✕
+                  </button>
+                </form>
+                {unlockedCosmetics
+                  .filter((c) => c.border)
+                  .map((c) => (
+                    <form key={c.key} action={equipCosmetic}>
+                      <input type="hidden" name="border" value={c.border} />
+                      <button
+                        className={`press h-9 w-9 rounded-full border-[3px] bg-surface2 ${c.border} ${
+                          profile.equipped_border === c.border ? "ring-2 ring-forge" : ""
+                        }`}
+                      />
+                    </form>
+                  ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Stats */}
       <section
         className="fade-in-up mt-4 grid grid-cols-3 gap-3"
@@ -217,6 +363,38 @@ function Stat({
     <div className={`rounded-xl border p-4 text-center ${accent ? ACCENTS[accent] : "border-line bg-surface"}`}>
       <div className="text-lg font-black">{value}</div>
       <div className="mt-1 text-xs uppercase tracking-wide text-muted">{label}</div>
+    </div>
+  );
+}
+
+function StatBar({
+  label,
+  icon,
+  value,
+  max,
+  color,
+}: {
+  label: string;
+  icon: string;
+  value: number;
+  max: number;
+  color: string;
+}) {
+  const pct = Math.min(100, Math.round((value / max) * 100));
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="font-semibold">
+          {icon} {label}
+        </span>
+        <span className="text-muted">{value}</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-surface2">
+        <div
+          className={`h-full rounded-full ${color} transition-all duration-700 ease-out`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
     </div>
   );
 }

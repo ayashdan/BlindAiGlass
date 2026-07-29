@@ -224,6 +224,87 @@ Both are linked from the dashboard.
   tier) and shows everywhere your avatar does. Remove it anytime to go
   back to the emoji.
 
+### AAA game-director pass: character stats, class, cosmetics, rivals, boss fights, seasons, recovery
+
+Run these four migrations, in order, in Supabase SQL Editor:
+
+**1. `0014_character_stats.sql`**
+```sql
+alter table public.profiles
+  add column if not exists stat_power      integer not null default 0,
+  add column if not exists stat_grit       integer not null default 0,
+  add column if not exists stat_endurance  integer not null default 0,
+  add column if not exists stat_discipline integer not null default 0;
+```
+
+**2. `0015_cosmetics.sql`**
+```sql
+alter table public.profiles
+  add column if not exists equipped_border text,
+  add column if not exists equipped_title  text;
+```
+
+**3. `0016_season_pass.sql`**
+```sql
+insert into public.app_settings (key, value) values ('season_number', '1')
+  on conflict (key) do nothing;
+insert into public.app_settings (key, value) values ('season_started_at', now()::text)
+  on conflict (key) do nothing;
+
+create table if not exists public.season_pass_progress (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references auth.users on delete cascade,
+  season_number integer not null,
+  tier          integer not null,
+  awarded_at    timestamptz not null default now(),
+  unique (user_id, season_number, tier)
+);
+
+alter table public.season_pass_progress enable row level security;
+
+drop policy if exists "season_pass_select_own" on public.season_pass_progress;
+create policy "season_pass_select_own"
+  on public.season_pass_progress for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "season_pass_insert_own" on public.season_pass_progress;
+create policy "season_pass_insert_own"
+  on public.season_pass_progress for insert
+  with check (auth.uid() = user_id);
+```
+
+**4. `0017_recovery.sql`**
+```sql
+alter table public.profiles
+  add column if not exists last_rest_date date,
+  add column if not exists recovery_bonus_pct integer not null default 0;
+```
+
+What each system does:
+- **Character stats** — every workout grows Power (chest/shoulders/triceps),
+  Grit (back/biceps), Endurance (legs/cardio/full body/abs/forearms), or
+  Discipline (streak consistency + quests completed) instead of one flat
+  XP number. Shown as bars on the dashboard and full profile.
+- **Class** — derived live from your Power/Grit/Endurance balance: Titan
+  (Power-dominant), Warden (Grit), Ranger (Endurance), or Adept (balanced).
+  Not chosen — earned from how you actually train.
+- **Cosmetics** — avatar borders and titles unlocked by achievements you've
+  already earned (see `lib/game/cosmetics.ts`), equippable on `/profile`.
+  Deliberately not random loot — no gambling-adjacent mechanic.
+- **Rival spotlight** — the dashboard highlights the friend closest above
+  you in XP ("Sarah is 40 XP ahead — catch up!"), or tells you you're
+  leading if nobody's ahead.
+- **Boss-fight framing** — 7-day streak, 30-day streak, 100 workouts, and
+  Level 50 now show a "⚔️ Boss Defeated" treatment in the achievement
+  celebration instead of a normal card.
+- **Season pass** — a 28-day workout-count track (5/15/30/50 workouts) that
+  pays bonus XP at each tier, shown on the dashboard. No stat resets — the
+  admin starts a new season from `/admin/settings` whenever they want,
+  which only restarts this track.
+- **Recovery** — log a deliberate rest day (once per day, only if you
+  haven't worked out yet today) for a one-shot +10% XP bonus on your next
+  workout. Rewards planned rest instead of just not punishing it.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:

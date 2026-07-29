@@ -7,8 +7,16 @@ import Link from "next/link";
 import { logWorkout } from "@/app/(app)/workout/actions";
 import AchievementCelebration from "./AchievementCelebration";
 import { MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
+import { CLASS_INFO, type CharacterClass } from "@/lib/game/stats";
 import ShareButton from "@/components/ShareButton";
 import type { WorkoutResult } from "@/lib/types";
+
+const STAT_ICONS: Record<string, string> = {
+  power: "🔥",
+  grit: "🗡️",
+  endurance: "🏃",
+  discipline: "🧠",
+};
 
 const DIFFICULTIES = [
   { key: "easy", label: "Easy" },
@@ -99,6 +107,47 @@ export default function WorkoutForm() {
           <p className="mt-3 text-lg font-bold">
             🔥 {result.streak} day streak
           </p>
+
+          {result.recoveryBonusApplied && (
+            <p className="mt-2 text-sm text-sky-400">🌙 Recovery bonus applied to this workout</p>
+          )}
+
+          {result.statGains.length > 0 && (
+            <div className="celebrate-pop mt-4 flex flex-wrap justify-center gap-2">
+              {result.statGains.map((g) => (
+                <span
+                  key={g.stat}
+                  className="rounded-full border border-line bg-surface px-3 py-1 text-xs font-bold"
+                >
+                  {STAT_ICONS[g.stat] ?? "✨"} +{g.amount} {g.stat}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {result.newClass && (
+            <div className="celebrate-pop mt-4 rounded-xl border border-fuchsia-400/40 bg-fuchsia-400/10 p-4">
+              <p className="text-lg font-black text-fuchsia-300">
+                {CLASS_INFO[result.newClass as CharacterClass]?.icon} Your build shifted to{" "}
+                {result.newClass}!
+              </p>
+            </div>
+          )}
+
+          {result.seasonTiersReached.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {result.seasonTiersReached.map((t, i) => (
+                <div
+                  key={t.tier}
+                  className="celebrate-pop rounded-xl border border-fuchsia-400/40 bg-fuchsia-400/10 p-3"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                >
+                  <p className="font-bold text-fuchsia-300">🎖️ Season tier {t.tier} reached!</p>
+                  <p className="text-sm text-fuchsia-200/80">+{t.xpReward} XP</p>
+                </div>
+              ))}
+            </div>
+          )}
 
           {result.freezeUsed && (
             <div className="celebrate-pop mt-4 rounded-xl border border-sky-400/40 bg-sky-400/10 p-3">

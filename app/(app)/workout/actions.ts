@@ -8,8 +8,15 @@ import { applyXp } from "@/lib/game/xp-server";
 import { checkAndAwardAchievements } from "@/lib/game/achievements-server";
 import { checkAndCompleteQuests } from "@/lib/game/quests-server";
 import { checkAndRecordPRs } from "@/lib/game/records-server";
+import { checkAndAwardSeasonTiers } from "@/lib/game/season-server";
 import { VALID_MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
-import type { WorkoutResult } from "@/lib/types";
+import {
+  computeStatGains,
+  deriveClass,
+  DISCIPLINE_PER_STREAK_DAY,
+  DISCIPLINE_PER_QUEST,
+} from "@/lib/game/stats";
+import type { WorkoutResult, StatGain } from "@/lib/types";
 
 // Completing a workout is worth a base 100 XP, plus a bonus for difficulty.
 const BASE_XP = 100;
@@ -50,7 +57,21 @@ export async function logWorkout(input: {
 
   const notes = (input.notes || "").trim().slice(0, 500) || null;
 
-  const xpEarned = BASE_XP + DIFFICULTY_BONUS[difficulty];
+  // ---- Read current profile ----
+  const { data: profData } = await supabase
+    .from("profiles")
+    .select(
+      "total_workouts, current_streak, longest_streak, last_workout_date, streak_freezes, trained_muscle_groups, stat_power, stat_grit, stat_endurance, stat_discipline, recovery_bonus_pct"
+    )
+    .eq("id", user.id)
+    .single();
+  const prof = profData as any;
+
+  // ---- Recovery bonus (consumed by this workout, if one is banked) ----
+  const recoveryPct = prof?.recovery_bonus_pct ?? 0;
+  const recoveryBonusApplied = recoveryPct > 0;
+  const baseXp = BASE_XP + DIFFICULTY_BONUS[difficulty];
+  const xpEarned = recoveryBonusApplied ? Math.round(baseXp * (1 + recoveryPct / 100)) : baseXp;
 
   // ---- Save the workout ----
   const { error: insErr } = await supabase.from("workouts").insert({
@@ -64,21 +85,18 @@ export async function logWorkout(input: {
   });
   if (insErr) return { ok: false, error: "Could not save the workout." };
 
-  // ---- Read current profile stats ----
-  const { data: prof } = await supabase
-    .from("profiles")
-    .select(
-      "total_workouts, current_streak, longest_streak, last_workout_date, streak_freezes, trained_muscle_groups"
-    )
-    .eq("id", user.id)
-    .single();
-
   const prevWorkouts = prof?.total_workouts ?? 0;
   const prevStreak = prof?.current_streak ?? 0;
   const prevLongest = prof?.longest_streak ?? 0;
   const lastDate = (prof?.last_workout_date as string | null) ?? null;
   const prevFreezes = prof?.streak_freezes ?? 0;
   const prevTrained = (prof?.trained_muscle_groups as string[]) ?? [];
+  const prevStats = {
+    power: prof?.stat_power ?? 0,
+    grit: prof?.stat_grit ?? 0,
+    endurance: prof?.stat_endurance ?? 0,
+    discipline: prof?.stat_discipline ?? 0,
+  };
 
   // ---- Streak logic (UTC dates) ----
   // Worked out today already -> streak unchanged. Worked out yesterday -> +1.
@@ -117,6 +135,43 @@ export async function logWorkout(input: {
   for (const g of muscleGroups) trainedSet.add(g);
   const newTrained = Array.from(trainedSet);
 
+  // ---- Check today's quests against today's workouts (including this one) ----
+  const todayStart = `${todayStr}T00:00:00.000Z`;
+  const { data: todaysWorkouts } = await supabase
+    .from("workouts")
+    .select("muscle_groups, duration_minutes, difficulty")
+    .eq("user_id", user.id)
+    .gte("created_at", todayStart);
+  const rows = todaysWorkouts ?? [];
+  const quest = await checkAndCompleteQuests({
+    workoutsToday: rows.length,
+    muscleGroupsToday: rows.flatMap((r: any) => (r.muscle_groups as string[]) ?? []),
+    maxDurationToday: rows.reduce((m: number, r: any) => Math.max(m, r.duration_minutes ?? 0), 0),
+    hardToday: rows.some((r: any) => r.difficulty === "hard"),
+  });
+
+  // ---- Character stat gains: power/grit/endurance from what was trained,
+  // discipline from consistency (streak advancing + quests completed) ----
+  const gains = computeStatGains(muscleGroups, difficulty);
+  const disciplineGain =
+    (advancedToday ? DISCIPLINE_PER_STREAK_DAY : 0) + quest.completed.length * DISCIPLINE_PER_QUEST;
+
+  const newStats = {
+    power: prevStats.power + (gains.power ?? 0),
+    grit: prevStats.grit + (gains.grit ?? 0),
+    endurance: prevStats.endurance + (gains.endurance ?? 0),
+    discipline: prevStats.discipline + disciplineGain,
+  };
+
+  const oldClass = deriveClass(prevStats);
+  const newClassVal = deriveClass(newStats);
+  const newClass = newClassVal !== oldClass ? newClassVal : null;
+
+  const statGains: StatGain[] = Object.entries(gains)
+    .filter(([, amount]) => (amount ?? 0) > 0)
+    .map(([stat, amount]) => ({ stat, amount: amount ?? 0 }));
+  if (disciplineGain > 0) statGains.push({ stat: "discipline", amount: disciplineGain });
+
   await supabase
     .from("profiles")
     .update({
@@ -126,6 +181,11 @@ export async function logWorkout(input: {
       last_workout_date: todayStr,
       streak_freezes: newFreezes,
       trained_muscle_groups: newTrained,
+      stat_power: newStats.power,
+      stat_grit: newStats.grit,
+      stat_endurance: newStats.endurance,
+      stat_discipline: newStats.discipline,
+      recovery_bonus_pct: 0, // consumed, whether or not it was active
     })
     .eq("id", user.id);
 
@@ -148,27 +208,15 @@ export async function logWorkout(input: {
     muscleGroupVariety: newTrained.length,
   });
 
-  // ---- Check today's quests against today's workouts (including this one) ----
-  const todayStart = `${todayStr}T00:00:00.000Z`;
-  const { data: todaysWorkouts } = await supabase
-    .from("workouts")
-    .select("muscle_groups, duration_minutes, difficulty")
-    .eq("user_id", user.id)
-    .gte("created_at", todayStart);
-  const rows = todaysWorkouts ?? [];
-  const quest = await checkAndCompleteQuests({
-    workoutsToday: rows.length,
-    muscleGroupsToday: rows.flatMap((r: any) => (r.muscle_groups as string[]) ?? []),
-    maxDurationToday: rows.reduce((m: number, r: any) => Math.max(m, r.duration_minutes ?? 0), 0),
-    hardToday: rows.some((r: any) => r.difficulty === "hard"),
-  });
+  // ---- Check season pass tiers ----
+  const season = await checkAndAwardSeasonTiers();
 
-  // ---- Award any achievement/quest/PR bonus XP (can trigger another level-up) ----
+  // ---- Award any achievement/quest/PR/season bonus XP (can trigger another level-up) ----
   let level = xp1.level;
   let rank = xp1.rank;
   let leveledUp = xp1.leveledUp;
   let rankChanged = xp1.rankChanged;
-  const bonusXp = ach.xpAwarded + quest.xpAwarded + prXp;
+  const bonusXp = ach.xpAwarded + quest.xpAwarded + prXp + season.xpAwarded;
   if (bonusXp > 0) {
     const xp2 = await applyXp(bonusXp);
     level = xp2.level;
@@ -194,5 +242,9 @@ export async function logWorkout(input: {
     freezeUsed,
     freezeEarned,
     streakFreezes: newFreezes,
+    statGains,
+    newClass,
+    seasonTiersReached: season.reached,
+    recoveryBonusApplied,
   };
 }

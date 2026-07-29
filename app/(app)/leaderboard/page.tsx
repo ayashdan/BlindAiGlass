@@ -23,7 +23,9 @@ export default async function LeaderboardPage({
 
   const { data: top } = await supabase
     .from("profiles")
-    .select("id, username, avatar, avatar_url, xp, level, rank, current_streak, prestige")
+    .select(
+      "id, username, avatar, avatar_url, xp, level, rank, current_streak, prestige, equipped_border, equipped_title"
+    )
     .order(by, { ascending: false })
     .limit(PAGE_SIZE);
 
@@ -100,7 +102,12 @@ export default async function LeaderboardPage({
               style={{ animationDelay: `${Math.min(i, 10) * 0.03}s` }}
             >
               <span className="w-8 text-center font-black text-muted">{medal(i)}</span>
-              <AvatarDisplay avatarUrl={u.avatar_url} avatar={u.avatar} size={32} />
+              <AvatarDisplay
+                avatarUrl={u.avatar_url}
+                avatar={u.avatar}
+                borderClass={u.equipped_border}
+                size={32}
+              />
               <div className="flex-1">
                 <p className="font-bold">
                   {u.prestige > 0 && <span className="mr-1 text-amber-400">⭐×{u.prestige}</span>}
@@ -109,6 +116,7 @@ export default async function LeaderboardPage({
                 </p>
                 <p className="text-xs text-muted">
                   Level {u.level} · {u.rank}
+                  {u.equipped_title ? ` · "${u.equipped_title}"` : ""}
                 </p>
               </div>
               <span className="font-semibold text-forge">

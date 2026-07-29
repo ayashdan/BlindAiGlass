@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { AVATARS } from "@/lib/game/avatars";
 import { MAX_LEVEL } from "@/lib/game/leveling";
+import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
 
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024; // 3MB
 
@@ -90,6 +91,53 @@ export async function prestige() {
     .from("profiles")
     .update({ xp: 0, level: 1, rank: "Beginner", prestige: (prof.prestige ?? 0) + 1 })
     .eq("id", user.id);
+
+  revalidatePath("/profile");
+  revalidatePath("/dashboard");
+  revalidatePath("/leaderboard");
+}
+
+// Equips a border or title — only ones unlocked via an earned achievement
+// are accepted (validated server-side against the user's actual unlocks,
+// not trusted from the form).
+export async function equipCosmetic(formData: FormData) {
+  const border = formData.get("border");
+  const title = formData.get("title");
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: catalog } = await supabase.from("achievements").select("id, key");
+  const { data: mine } = await supabase.from("user_achievements").select("achievement_id");
+  const have = new Set((mine ?? []).map((r: any) => r.achievement_id));
+  const unlockedKeys = new Set(
+    (catalog ?? []).filter((a: any) => have.has(a.id)).map((a: any) => a.key as string)
+  );
+
+  const unlockedBorders = new Set(
+    Array.from(unlockedKeys)
+      .map((k) => ACHIEVEMENT_COSMETICS[k]?.border)
+      .filter((b): b is string => Boolean(b))
+  );
+  const unlockedTitles = new Set(
+    Array.from(unlockedKeys)
+      .map((k) => ACHIEVEMENT_COSMETICS[k]?.title)
+      .filter((t): t is string => Boolean(t))
+  );
+
+  const update: Record<string, string | null> = {};
+  if (typeof border === "string") {
+    update.equipped_border = border === "" ? null : unlockedBorders.has(border) ? border : null;
+  }
+  if (typeof title === "string") {
+    update.equipped_title = title === "" ? null : unlockedTitles.has(title) ? title : null;
+  }
+  if (Object.keys(update).length === 0) return;
+
+  await supabase.from("profiles").update(update).eq("id", user.id);
 
   revalidatePath("/profile");
   revalidatePath("/dashboard");

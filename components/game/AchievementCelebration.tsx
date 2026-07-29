@@ -5,6 +5,7 @@
 // Pure CSS animation (see globals.css) — no dependencies, no cost.
 import { useMemo } from "react";
 import type { UnlockedAchievement } from "@/lib/types";
+import { BOSS_ACHIEVEMENTS } from "@/lib/game/cosmetics";
 
 const CONFETTI_COLORS = ["#ff6a1a", "#ff8c4b", "#ffd23f", "#ffffff", "#4ade80"];
 const CONFETTI_COUNT = 36;
@@ -59,22 +60,36 @@ export default function AchievementCelebration({
         </p>
 
         <div className="mt-6 space-y-4">
-          {achievements.map((a, i) => (
-            <div
-              key={a.key}
-              className="celebrate-pop rounded-2xl border border-yellow-500/50 bg-yellow-500/10 p-5"
-              style={{ animationDelay: `${0.15 + i * 0.2}s` }}
-            >
+          {achievements.map((a, i) => {
+            const bossName = BOSS_ACHIEVEMENTS[a.key];
+            return (
               <div
-                className="celebrate-bounce text-5xl"
-                style={{ animationDelay: `${0.5 + i * 0.2}s` }}
+                key={a.key}
+                className={
+                  "celebrate-pop rounded-2xl border p-5 " +
+                  (bossName
+                    ? "border-red-500/60 bg-gradient-to-br from-red-500/20 via-amber-500/10 to-transparent"
+                    : "border-yellow-500/50 bg-yellow-500/10")
+                }
+                style={{ animationDelay: `${0.15 + i * 0.2}s` }}
               >
-                {a.icon}
+                {bossName && (
+                  <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-red-400">
+                    ⚔️ Boss Defeated
+                  </p>
+                )}
+                <div
+                  className="celebrate-bounce text-5xl"
+                  style={{ animationDelay: `${0.5 + i * 0.2}s` }}
+                >
+                  {a.icon}
+                </div>
+                {bossName && <p className="mt-1 text-sm font-bold text-red-300">{bossName}</p>}
+                <p className="mt-2 text-lg font-black">{a.name}</p>
+                <p className="text-sm font-semibold text-yellow-300/90">+{a.xpReward} XP</p>
               </div>
-              <p className="mt-2 text-lg font-black">{a.name}</p>
-              <p className="text-sm font-semibold text-yellow-300/90">+{a.xpReward} XP</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <button

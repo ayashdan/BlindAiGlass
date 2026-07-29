@@ -17,6 +17,14 @@ export type Profile = {
   streak_freezes: number;
   trained_muscle_groups: string[];
   prestige: number;
+  stat_power: number;
+  stat_grit: number;
+  stat_endurance: number;
+  stat_discipline: number;
+  equipped_border: string | null;
+  equipped_title: string | null;
+  last_rest_date: string | null;
+  recovery_bonus_pct: number;
 };
 
 // An achievement the user just unlocked.
@@ -43,12 +51,18 @@ export type NewRecord = {
   value: number; // minutes
 };
 
+// A stat gain from a single workout (power/grit/endurance).
+export type StatGain = { stat: string; amount: number };
+
+// A season pass tier crossed by this workout.
+export type SeasonTierReached = { tier: number; xpReward: number };
+
 // The result of logging a workout (shared between the server action and the UI).
 export type WorkoutResult =
   | { ok: false; error: string }
   | {
       ok: true;
-      xpEarned: number; // workout + streak + achievement + quest + PR XP
+      xpEarned: number; // workout + streak + achievement + quest + PR + season XP
       streak: number;
       leveledUp: boolean;
       level: number;
@@ -60,4 +74,8 @@ export type WorkoutResult =
       freezeUsed: boolean;
       freezeEarned: boolean;
       streakFreezes: number;
+      statGains: StatGain[];
+      newClass: string | null; // set only when the workout changed your class
+      seasonTiersReached: SeasonTierReached[];
+      recoveryBonusApplied: boolean;
     };

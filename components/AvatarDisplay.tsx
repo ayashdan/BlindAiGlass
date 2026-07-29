@@ -9,25 +9,39 @@ export default function AvatarDisplay({
   avatar,
   size = 40,
   className = "",
+  borderClass,
 }: {
   avatarUrl?: string | null;
   avatar?: string | null;
   size?: number;
   className?: string;
+  borderClass?: string | null; // an equipped cosmetic border, e.g. "border-amber-400"
 }) {
+  const ring = borderClass ? `${borderClass} border-[3px] rounded-full` : "";
+
   if (avatarUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={avatarUrl}
-        alt=""
-        className={`rounded-full object-cover ${className}`}
-        style={{ width: size, height: size }}
-      />
+      <span className={`inline-block ${ring}`} style={{ padding: borderClass ? 2 : 0 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={avatarUrl}
+          alt=""
+          className={`rounded-full object-cover ${className}`}
+          style={{ width: size, height: size }}
+        />
+      </span>
     );
   }
   return (
-    <span className={className} style={{ fontSize: size * 0.75, lineHeight: 1 }}>
+    <span
+      className={`inline-flex items-center justify-center ${ring} ${className}`}
+      style={{
+        fontSize: size * 0.75,
+        lineHeight: 1,
+        width: borderClass ? size * 1.2 : undefined,
+        height: borderClass ? size * 1.2 : undefined,
+      }}
+    >
       {resolveAvatar(avatar)}
     </span>
   );

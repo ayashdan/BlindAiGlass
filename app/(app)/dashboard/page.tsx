@@ -6,14 +6,18 @@ import { levelProgress, rankForLevel } from "@/lib/game/leveling";
 import { isAdminEmail } from "@/lib/admin";
 import { ensureTodayQuests } from "@/lib/game/quests-server";
 import { completeQuest } from "@/app/(app)/quests/actions";
+import { logRestDay } from "@/app/(app)/recovery/actions";
 import { dailyMotivation } from "@/lib/game/motivation";
+import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
+import { getSeasonStatus } from "@/lib/game/season-server";
 import ThemeToggle from "@/components/ThemeToggle";
 import ShareButton from "@/components/ShareButton";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import type { Profile } from "@/lib/types";
 
-// The logged-in home hub. Shows your level/XP/rank and stats, plus the main
-// action: log a workout.
+// The logged-in home hub. Shows your character build, level/XP/rank,
+// quests, season progress, and a rival to chase, plus the main action:
+// log a workout.
 export default async function Dashboard() {
   const supabase = createClient();
   const {
@@ -44,14 +48,64 @@ export default async function Dashboard() {
   const quests = await ensureTodayQuests();
   const todayStr = new Date().toISOString().slice(0, 10);
   const motivation = dailyMotivation(`${user.id}:${todayStr}`);
+  const season = await getSeasonStatus();
+
+  const characterStats = {
+    power: profile.stat_power,
+    grit: profile.stat_grit,
+    endurance: profile.stat_endurance,
+    discipline: profile.stat_discipline,
+  };
+  const charClass = deriveClass(characterStats);
+  const classInfo = CLASS_INFO[charClass];
+  const maxStat = Math.max(
+    1,
+    characterStats.power,
+    characterStats.grit,
+    characterStats.endurance,
+    characterStats.discipline
+  );
+
+  // ---- Rival spotlight: the closest friend ahead of you in XP ----
+  const { data: friendRows } = await supabase
+    .from("friendships")
+    .select("user_id, friend_id")
+    .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+    .eq("status", "accepted");
+  const friendIds = (friendRows ?? []).map((r: any) =>
+    r.user_id === user.id ? r.friend_id : r.user_id
+  );
+  let rival: any = null;
+  let leadingFriends = false;
+  if (friendIds.length > 0) {
+    const { data: friendProfiles } = await supabase
+      .from("profiles")
+      .select("username, xp, avatar, avatar_url")
+      .in("id", friendIds);
+    const above = (friendProfiles ?? [])
+      .filter((p: any) => p.xp > profile.xp)
+      .sort((a: any, b: any) => a.xp - b.xp)[0];
+    if (above) rival = above;
+    else if ((friendProfiles ?? []).length > 0) leadingFriends = true;
+  }
+
+  const canLogRest = profile.last_workout_date !== todayStr && profile.last_rest_date !== todayStr;
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
       <header className="mb-8 flex items-center justify-between">
         <Link href="/profile" className="flex items-center gap-3">
-          <AvatarDisplay avatarUrl={profile.avatar_url} avatar={profile.avatar} size={44} />
+          <AvatarDisplay
+            avatarUrl={profile.avatar_url}
+            avatar={profile.avatar}
+            borderClass={profile.equipped_border}
+            size={44}
+          />
           <div>
-            <p className="text-sm text-muted">Welcome back,</p>
+            <p className="text-sm text-muted">
+              {classInfo.icon} {charClass}
+              {profile.equipped_title ? ` · ${profile.equipped_title}` : ""}
+            </p>
             <h1 className="text-2xl font-black tracking-tight">
               {profile.prestige > 0 && (
                 <span className="mr-1 text-amber-400">⭐×{profile.prestige}</span>
@@ -110,14 +164,82 @@ export default async function Dashboard() {
         </div>
       </section>
 
+      {/* Character build */}
+      <section
+        className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
+        style={{ animationDelay: "0.03s" }}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-black uppercase tracking-wide text-muted">
+            {classInfo.icon} {charClass} build
+          </p>
+          <Link href="/profile" className="text-xs text-forge hover:underline">
+            Full sheet →
+          </Link>
+        </div>
+        <div className="space-y-2">
+          <StatBar label="Power" icon="🔥" value={characterStats.power} max={maxStat} color="bg-rose-500" />
+          <StatBar label="Grit" icon="🗡️" value={characterStats.grit} max={maxStat} color="bg-sky-500" />
+          <StatBar
+            label="Endurance"
+            icon="🏃"
+            value={characterStats.endurance}
+            max={maxStat}
+            color="bg-emerald-500"
+          />
+          <StatBar
+            label="Discipline"
+            icon="🧠"
+            value={characterStats.discipline}
+            max={maxStat}
+            color="bg-violet-500"
+          />
+        </div>
+      </section>
+
+      {/* Rival spotlight */}
+      {rival && (
+        <div
+          className="fade-in-up mt-4 flex items-center gap-3 rounded-2xl border border-red-500/30 bg-red-500/5 p-4"
+          style={{ animationDelay: "0.06s" }}
+        >
+          <AvatarDisplay avatarUrl={rival.avatar_url} avatar={rival.avatar} size={32} />
+          <p className="flex-1 text-sm">
+            <span className="font-bold text-red-400">Rival:</span> {rival.username} is{" "}
+            <span className="font-black">{rival.xp - profile.xp} XP</span> ahead. Catch up!
+          </p>
+        </div>
+      )}
+      {leadingFriends && (
+        <p
+          className="fade-in-up mt-4 text-center text-sm text-emerald-400"
+          style={{ animationDelay: "0.06s" }}
+        >
+          👑 You're leading your friends' leaderboard. Defend it.
+        </p>
+      )}
+
       {/* Main action */}
       <Link
         href="/workout"
         className="press fade-in-up mt-4 block rounded-2xl bg-gradient-to-r from-forge to-rose-500 py-5 text-center text-lg font-black text-neutral-950 shadow-lg shadow-forge/20 transition hover:from-forge-soft hover:to-rose-400"
-        style={{ animationDelay: "0.05s" }}
+        style={{ animationDelay: "0.08s" }}
       >
         + Log a workout
       </Link>
+
+      {canLogRest && (
+        <form action={logRestDay} className="fade-in-up mt-2" style={{ animationDelay: "0.09s" }}>
+          <button className="press w-full rounded-xl border border-sky-500/30 bg-sky-500/5 py-2 text-sm font-bold text-sky-400 transition hover:border-sky-500/60">
+            😴 Log a rest day (+10% XP on your next workout)
+          </button>
+        </form>
+      )}
+      {profile.recovery_bonus_pct > 0 && (
+        <p className="mt-2 text-center text-xs text-sky-300/80">
+          🌙 Recovery active: +{profile.recovery_bonus_pct}% XP on your next workout.
+        </p>
+      )}
 
       {/* Quick stats */}
       <section
@@ -133,6 +255,36 @@ export default async function Dashboard() {
           🧊 {profile.streak_freezes} streak freeze{profile.streak_freezes === 1 ? "" : "s"}{" "}
           banked — protects your streak if you miss a day.
         </p>
+      )}
+
+      {/* Season pass */}
+      {season && (
+        <section
+          className="fade-in-up mt-4 rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-5"
+          style={{ animationDelay: "0.13s" }}
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-black uppercase tracking-wide text-fuchsia-400">
+              🎖️ Season {season.seasonNumber}
+            </p>
+            <p className="text-xs text-muted">{season.daysLeft} days left</p>
+          </div>
+          <div className="flex gap-2">
+            {season.tiers.map((t) => (
+              <div key={t.tier} className="flex-1 text-center">
+                <div
+                  className={
+                    "h-2 rounded-full " + (t.done ? "bg-fuchsia-500" : "bg-surface2")
+                  }
+                />
+                <p className="mt-1 text-[10px] text-muted">{t.workouts}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            {season.workoutsThisSeason} workouts this season
+          </p>
+        </section>
       )}
 
       {/* Achievements */}
@@ -183,7 +335,7 @@ export default async function Dashboard() {
           style={{ animationDelay: "0.2s" }}
         >
           <p className="mb-3 text-sm font-black uppercase tracking-wide text-emerald-400">
-            🎯 Today's quests
+            🎯 Today's missions
           </p>
           <div className="space-y-2">
             {quests.map((q) => (
@@ -249,6 +401,38 @@ function Stat({
       <div className="text-xl font-black">{value}</div>
       <div className="mt-1 text-xs uppercase tracking-wide text-muted">
         {label}
+      </div>
+    </div>
+  );
+}
+
+function StatBar({
+  label,
+  icon,
+  value,
+  max,
+  color,
+}: {
+  label: string;
+  icon: string;
+  value: number;
+  max: number;
+  color: string;
+}) {
+  const pct = Math.min(100, Math.round((value / max) * 100));
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="font-semibold">
+          {icon} {label}
+        </span>
+        <span className="text-muted">{value}</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-surface2">
+        <div
+          className={`h-full rounded-full ${color} transition-all duration-700 ease-out`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );
