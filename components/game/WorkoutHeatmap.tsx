@@ -23,7 +23,7 @@ function buildCells(counts: Record<string, number>, weeks: number): Cell[] {
 }
 
 function levelClass(count: number): string {
-  if (count <= 0) return "bg-neutral-800";
+  if (count <= 0) return "bg-surface2";
   if (count === 1) return "bg-forge/35";
   if (count === 2) return "bg-forge/65";
   return "bg-forge";
@@ -60,9 +60,9 @@ export default function WorkoutHeatmap({
           )
         )}
       </div>
-      <div className="mt-2 flex items-center gap-1.5 text-xs text-neutral-500">
+      <div className="mt-2 flex items-center gap-1.5 text-xs text-muted">
         <span>Less</span>
-        <div className="h-3 w-3 rounded-sm bg-neutral-800" />
+        <div className="h-3 w-3 rounded-sm bg-surface2" />
         <div className="h-3 w-3 rounded-sm bg-forge/35" />
         <div className="h-3 w-3 rounded-sm bg-forge/65" />
         <div className="h-3 w-3 rounded-sm bg-forge" />

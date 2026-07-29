@@ -11,7 +11,7 @@ export default function LoginPage({
       <h1 className="mb-1 text-3xl font-black tracking-tight">
         Welcome back to <span className="text-forge">Forge</span>
       </h1>
-      <p className="mb-8 text-neutral-400">Log in to continue your streak.</p>
+      <p className="mb-8 text-muted">Log in to continue your streak.</p>
 
       {searchParams.error && (
         <p className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -25,14 +25,14 @@ export default function LoginPage({
           name="email"
           required
           placeholder="Email"
-          className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+          className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
         />
         <input
           type="password"
           name="password"
           required
           placeholder="Password"
-          className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+          className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
         />
         <button
           type="submit"
@@ -42,7 +42,7 @@ export default function LoginPage({
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-neutral-400">
+      <p className="mt-6 text-center text-sm text-muted">
         New here?{" "}
         <Link href="/signup" className="font-semibold text-forge">
           Create an account

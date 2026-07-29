@@ -24,11 +24,11 @@ export default async function AchievementsPage() {
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
-      <Link href="/dashboard" className="text-sm text-neutral-400 hover:text-neutral-200">
+      <Link href="/dashboard" className="text-sm text-muted hover:text-fg">
         ← Back
       </Link>
       <h1 className="mb-1 mt-3 text-2xl font-black tracking-tight">Achievements</h1>
-      <p className="mb-6 text-sm text-neutral-400">
+      <p className="mb-6 text-sm text-muted">
         {unlockedCount} of {list.length} unlocked
       </p>
 
@@ -42,14 +42,14 @@ export default async function AchievementsPage() {
                 "fade-in-up flex items-center gap-4 rounded-xl border p-4 transition " +
                 (unlocked
                   ? "border-forge/40 bg-forge/5 shadow-[0_0_18px_rgba(255,106,26,0.15)]"
-                  : "border-neutral-800 bg-neutral-900 opacity-60")
+                  : "border-line bg-surface opacity-60")
               }
               style={{ animationDelay: `${Math.min(i, 8) * 0.05}s` }}
             >
               <div className="text-3xl">{unlocked ? a.icon : "🔒"}</div>
               <div className="flex-1">
                 <p className="font-bold">{a.name}</p>
-                <p className="text-sm text-neutral-400">{a.description}</p>
+                <p className="text-sm text-muted">{a.description}</p>
               </div>
               <div className="text-sm font-semibold text-forge">+{a.xp_reward} XP</div>
             </div>

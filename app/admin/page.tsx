@@ -60,10 +60,10 @@ export default async function AdminOverview() {
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5">
+    <div className="rounded-xl border border-line bg-surface p-5">
       <div className="text-2xl font-black">{value}</div>
-      <div className="mt-1 text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      {sub && <div className="mt-1 text-xs text-neutral-600">{sub}</div>}
+      <div className="mt-1 text-xs uppercase tracking-wide text-muted">{label}</div>
+      {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
     </div>
   );
 }

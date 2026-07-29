@@ -11,7 +11,7 @@ export default function SignupPage({
       <h1 className="mb-1 text-3xl font-black tracking-tight">
         Join <span className="text-forge">Forge</span>
       </h1>
-      <p className="mb-8 text-neutral-400">Create your account and start at Level 1.</p>
+      <p className="mb-8 text-muted">Create your account and start at Level 1.</p>
 
       {searchParams.error && (
         <p className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -25,21 +25,21 @@ export default function SignupPage({
           name="username"
           required
           placeholder="Username"
-          className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+          className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
         />
         <input
           type="email"
           name="email"
           required
           placeholder="Email"
-          className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+          className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
         />
         <input
           type="password"
           name="password"
           required
           placeholder="Password (min 6 characters)"
-          className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+          className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
         />
         <button
           type="submit"
@@ -49,7 +49,7 @@ export default function SignupPage({
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-neutral-400">
+      <p className="mt-6 text-center text-sm text-muted">
         Already have an account?{" "}
         <Link href="/login" className="font-semibold text-forge">
           Log in

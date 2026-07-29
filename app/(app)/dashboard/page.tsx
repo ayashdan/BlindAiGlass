@@ -6,8 +6,10 @@ import { levelProgress, rankForLevel } from "@/lib/game/leveling";
 import { isAdminEmail } from "@/lib/admin";
 import { ensureTodayQuests } from "@/lib/game/quests-server";
 import { completeQuest } from "@/app/(app)/quests/actions";
-import { resolveAvatar } from "@/lib/game/avatars";
 import { dailyMotivation } from "@/lib/game/motivation";
+import ThemeToggle from "@/components/ThemeToggle";
+import ShareButton from "@/components/ShareButton";
+import AvatarDisplay from "@/components/AvatarDisplay";
 import type { Profile } from "@/lib/types";
 
 // The logged-in home hub. Shows your level/XP/rank and stats, plus the main
@@ -30,7 +32,7 @@ export default async function Dashboard() {
   if (!profile) {
     return (
       <main className="mx-auto max-w-lg px-6 py-16">
-        <p className="text-neutral-400">
+        <p className="text-muted">
           Setting up your profile… refresh in a moment.
         </p>
       </main>
@@ -47,13 +49,19 @@ export default async function Dashboard() {
     <main className="mx-auto max-w-lg px-6 py-12">
       <header className="mb-8 flex items-center justify-between">
         <Link href="/profile" className="flex items-center gap-3">
-          <span className="text-3xl">{resolveAvatar(profile.avatar)}</span>
+          <AvatarDisplay avatarUrl={profile.avatar_url} avatar={profile.avatar} size={44} />
           <div>
-            <p className="text-sm text-neutral-400">Welcome back,</p>
-            <h1 className="text-2xl font-black tracking-tight">{profile.username}</h1>
+            <p className="text-sm text-muted">Welcome back,</p>
+            <h1 className="text-2xl font-black tracking-tight">
+              {profile.prestige > 0 && (
+                <span className="mr-1 text-amber-400">⭐×{profile.prestige}</span>
+              )}
+              {profile.username}
+            </h1>
           </div>
         </Link>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {isAdminEmail(user.email) && (
             <Link
               href="/admin"
@@ -63,7 +71,7 @@ export default async function Dashboard() {
             </Link>
           )}
           <form action={signOut}>
-            <button className="rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-300 transition hover:border-neutral-600">
+            <button className="rounded-lg border border-line px-3 py-2 text-sm text-fg transition hover:border-forge/50">
               Log out
             </button>
           </form>
@@ -71,35 +79,41 @@ export default async function Dashboard() {
       </header>
 
       {/* Daily motivational message */}
-      <p className="fade-in-up mb-4 text-center text-sm italic text-neutral-400">
+      <p className="fade-in-up mb-4 text-center text-sm italic text-muted">
         "{motivation}"
       </p>
 
       {/* Level + XP card */}
-      <section className="fade-in-up rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
+      <section className="fade-in-up rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6">
         <div className="mb-3 flex items-baseline justify-between">
           <span className="text-lg font-bold">Level {progress.level}</span>
-          <span className="rounded-full bg-forge/15 px-3 py-1 text-sm font-semibold text-forge">
+          <span className="rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
             {rank}
           </span>
         </div>
-        <div className="h-3 w-full overflow-hidden rounded-full bg-neutral-800">
+        <div className="h-3 w-full overflow-hidden rounded-full bg-surface2">
           <div
-            className="h-full rounded-full bg-forge transition-all duration-700 ease-out"
+            className="h-full rounded-full bg-gradient-to-r from-forge to-amber-400 transition-all duration-700 ease-out"
             style={{ width: `${progress.percent}%` }}
           />
         </div>
-        <p className="mt-2 text-sm text-neutral-400">
+        <p className="mt-2 text-sm text-muted">
           {progress.atMax
             ? "Max level reached!"
             : `${progress.into} / ${progress.need} XP · ${progress.remaining} to next level`}
         </p>
+        <div className="mt-3">
+          <ShareButton
+            text={`I just hit Level ${progress.level} (${rank}) on Forge! 🔥 ${profile.current_streak} day streak.`}
+            label="Share progress"
+          />
+        </div>
       </section>
 
       {/* Main action */}
       <Link
         href="/workout"
-        className="press fade-in-up mt-4 block rounded-2xl bg-forge py-5 text-center text-lg font-black text-neutral-950 transition hover:bg-forge-soft"
+        className="press fade-in-up mt-4 block rounded-2xl bg-gradient-to-r from-forge to-rose-500 py-5 text-center text-lg font-black text-neutral-950 shadow-lg shadow-forge/20 transition hover:from-forge-soft hover:to-rose-400"
         style={{ animationDelay: "0.05s" }}
       >
         + Log a workout
@@ -110,9 +124,9 @@ export default async function Dashboard() {
         className="fade-in-up mt-4 grid grid-cols-3 gap-3"
         style={{ animationDelay: "0.1s" }}
       >
-        <Stat label="Streak" value={`${profile.current_streak}🔥`} />
-        <Stat label="Best" value={`${profile.longest_streak}`} />
-        <Stat label="Workouts" value={`${profile.total_workouts}`} />
+        <Stat label="Streak" value={`${profile.current_streak}🔥`} accent="sky" />
+        <Stat label="Best" value={`${profile.longest_streak}`} accent="violet" />
+        <Stat label="Workouts" value={`${profile.total_workouts}`} accent="emerald" />
       </section>
       {profile.streak_freezes > 0 && (
         <p className="mt-2 text-center text-xs text-sky-300/80">
@@ -124,33 +138,39 @@ export default async function Dashboard() {
       {/* Achievements */}
       <Link
         href="/achievements"
-        className="fade-in-up mt-4 flex items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900 px-5 py-4 transition hover:border-neutral-600"
+        className="fade-in-up mt-4 flex items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/5 px-5 py-4 transition hover:border-amber-500/60"
         style={{ animationDelay: "0.15s" }}
       >
         <span className="font-bold">🏅 Achievements</span>
-        <span className="text-neutral-400">View →</span>
+        <span className="text-muted">View →</span>
       </Link>
 
-      {/* Leaderboard + history + profile */}
+      {/* Leaderboard + friends + history + profile */}
       <div
-        className="fade-in-up mt-4 grid grid-cols-3 gap-3"
+        className="fade-in-up mt-4 grid grid-cols-2 gap-3"
         style={{ animationDelay: "0.18s" }}
       >
         <Link
           href="/leaderboard"
-          className="flex flex-col items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-2 py-4 text-center transition hover:border-neutral-600"
+          className="flex flex-col items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/5 px-2 py-4 text-center transition hover:border-rose-500/60"
         >
           <span className="text-sm font-bold">🏆 Leaderboard</span>
         </Link>
         <Link
+          href="/friends"
+          className="flex flex-col items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 px-2 py-4 text-center transition hover:border-fuchsia-500/60"
+        >
+          <span className="text-sm font-bold">🤝 Friends</span>
+        </Link>
+        <Link
           href="/history"
-          className="flex flex-col items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-2 py-4 text-center transition hover:border-neutral-600"
+          className="flex flex-col items-center justify-center rounded-2xl border border-sky-500/30 bg-sky-500/5 px-2 py-4 text-center transition hover:border-sky-500/60"
         >
           <span className="text-sm font-bold">📜 History</span>
         </Link>
         <Link
           href="/profile"
-          className="flex flex-col items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-2 py-4 text-center transition hover:border-neutral-600"
+          className="flex flex-col items-center justify-center rounded-2xl border border-violet-500/30 bg-violet-500/5 px-2 py-4 text-center transition hover:border-violet-500/60"
         >
           <span className="text-sm font-bold">👤 Profile</span>
         </Link>
@@ -159,10 +179,10 @@ export default async function Dashboard() {
       {/* Today's quests */}
       {quests.length > 0 && (
         <section
-          className="fade-in-up mt-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
+          className="fade-in-up mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5"
           style={{ animationDelay: "0.2s" }}
         >
-          <p className="mb-3 text-sm font-black uppercase tracking-wide text-neutral-400">
+          <p className="mb-3 text-sm font-black uppercase tracking-wide text-emerald-400">
             🎯 Today's quests
           </p>
           <div className="space-y-2">
@@ -173,7 +193,7 @@ export default async function Dashboard() {
                   "flex items-center gap-3 rounded-lg border px-3 py-2 transition " +
                   (q.completed
                     ? "border-forge/40 bg-forge/5"
-                    : "border-neutral-800 bg-neutral-950")
+                    : "border-line bg-bg")
                 }
               >
                 <span className="text-xl">{q.completed ? "✅" : q.icon}</span>
@@ -181,12 +201,12 @@ export default async function Dashboard() {
                   <p
                     className={
                       "text-sm font-bold " +
-                      (q.completed ? "text-neutral-400 line-through" : "")
+                      (q.completed ? "text-muted line-through" : "")
                     }
                   >
                     {q.title}
                   </p>
-                  <p className="text-xs text-neutral-500">{q.description}</p>
+                  <p className="text-xs text-muted">{q.description}</p>
                 </div>
                 {q.kind === "manual" && !q.completed ? (
                   <form action={completeQuest}>
@@ -207,11 +227,27 @@ export default async function Dashboard() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+const ACCENTS = {
+  sky: "border-sky-500/30 bg-sky-500/5",
+  violet: "border-violet-500/30 bg-violet-500/5",
+  emerald: "border-emerald-500/30 bg-emerald-500/5",
+  amber: "border-amber-500/30 bg-amber-500/5",
+  rose: "border-rose-500/30 bg-rose-500/5",
+} as const;
+
+function Stat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: keyof typeof ACCENTS;
+}) {
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 text-center">
+    <div className={`rounded-xl border p-4 text-center ${accent ? ACCENTS[accent] : "border-line bg-surface"}`}>
       <div className="text-xl font-black">{value}</div>
-      <div className="mt-1 text-xs uppercase tracking-wide text-neutral-500">
+      <div className="mt-1 text-xs uppercase tracking-wide text-muted">
         {label}
       </div>
     </div>

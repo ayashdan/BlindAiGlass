@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { joinWaitlist } from "./actions";
+import ThemeToggle from "@/components/ThemeToggle";
 
 // Public landing + waitlist signup. (A referral link "?ref=CODE" pre-fills the
 // hidden ref field so the inviter gets credit.)
@@ -12,31 +13,34 @@ export default function Home({
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
-      <p className="text-center text-sm font-semibold uppercase tracking-[0.3em] text-forge">
+      <div className="flex justify-end">
+        <ThemeToggle />
+      </div>
+      <p className="mt-4 text-center text-sm font-semibold uppercase tracking-[0.3em] text-forge">
         Forge
       </p>
       <h1 className="mt-4 text-center text-4xl font-black leading-tight tracking-tight sm:text-6xl">
         Turn your workouts into a <span className="text-forge">game.</span>
       </h1>
-      <p className="mx-auto mt-5 max-w-lg text-center text-lg text-neutral-400">
+      <p className="mx-auto mt-5 max-w-lg text-center text-lg text-muted">
         Earn XP for every workout. Level up, keep your streak alive, unlock
         achievements, and rank from Beginner to Elite. Fitness that actually
         keeps you coming back.
       </p>
 
       {/* A little mockup of the in-app reward, no image needed */}
-      <div className="mx-auto mt-10 max-w-sm rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
+      <div className="mx-auto mt-10 max-w-sm rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6">
         <div className="flex items-baseline justify-between">
           <span className="font-bold">Level 7</span>
-          <span className="rounded-full bg-forge/15 px-3 py-1 text-sm font-semibold text-forge">
+          <span className="rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
             Bronze
           </span>
         </div>
-        <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-neutral-800">
-          <div className="h-full w-2/3 rounded-full bg-forge" />
+        <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-surface2">
+          <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-forge to-amber-400" />
         </div>
-        <div className="mt-4 flex justify-between text-sm text-neutral-400">
-          <span>🔥 12 day streak</span>
+        <div className="mt-4 flex justify-between text-sm text-muted">
+          <span className="text-sky-400">🔥 12 day streak</span>
           <span className="font-semibold text-forge">+150 XP</span>
         </div>
       </div>
@@ -44,7 +48,7 @@ export default function Home({
       {/* Waitlist signup */}
       <section className="mx-auto mt-12 max-w-md">
         <h2 className="text-center text-xl font-black">Join the Forge waitlist</h2>
-        <p className="mt-1 text-center text-sm text-neutral-400">
+        <p className="mt-1 text-center text-sm text-muted">
           Be first in line for launch.
         </p>
 
@@ -60,14 +64,14 @@ export default function Home({
             type="text"
             name="name"
             placeholder="Name (optional)"
-            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+            className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
           />
           <input
             type="email"
             name="email"
             required
             placeholder="Email"
-            className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+            className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
           />
           <button
             type="submit"
@@ -84,7 +88,7 @@ export default function Home({
         )}
       </section>
 
-      <p className="mt-10 text-center text-sm text-neutral-500">
+      <p className="mt-10 text-center text-sm text-muted">
         Already have access?{" "}
         <Link href="/login" className="font-semibold text-forge">
           Log in

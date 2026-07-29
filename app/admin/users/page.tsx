@@ -24,31 +24,31 @@ export default async function AdminUsers({
           name="q"
           defaultValue={q}
           placeholder="Search by username…"
-          className="flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-sm outline-none focus:border-forge"
+          className="flex-1 rounded-lg border border-line bg-surface px-4 py-2 text-sm outline-none focus:border-forge"
         />
-        <button className="rounded-lg border border-neutral-800 px-4 py-2 text-sm font-semibold hover:border-forge hover:text-forge">
+        <button className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-forge hover:text-forge">
           Search
         </button>
       </form>
 
-      <p className="mb-3 text-sm text-neutral-500">{users.length} user(s)</p>
+      <p className="mb-3 text-sm text-muted">{users.length} user(s)</p>
 
       <div className="space-y-3">
         {users.map((u) => (
           <div
             key={u.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface p-4"
           >
             <div>
               <p className="font-bold">
                 {u.username}{" "}
                 {u.is_admin && <span className="text-xs text-forge">admin</span>}
               </p>
-              <p className="text-sm text-neutral-400">
+              <p className="text-sm text-muted">
                 Level {u.level} · {u.rank} · 🔥{u.current_streak} (best {u.longest_streak}) ·{" "}
                 {u.total_workouts} workouts
               </p>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-muted">
                 Joined {new Date(u.created_at).toLocaleDateString()}
               </p>
             </div>
@@ -61,7 +61,7 @@ export default async function AdminUsers({
           </div>
         ))}
         {users.length === 0 && (
-          <p className="text-neutral-500">No users found.</p>
+          <p className="text-muted">No users found.</p>
         )}
       </div>
     </div>

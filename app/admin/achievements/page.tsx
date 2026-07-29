@@ -17,25 +17,25 @@ export default async function AdminAchievements() {
           <form
             key={a.id}
             action={updateAchievement}
-            className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-900 p-4"
+            className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface p-4"
           >
             <input type="hidden" name="id" value={a.id} />
             <span className="text-2xl">{a.icon}</span>
             <input
               name="name"
               defaultValue={a.name}
-              className="w-40 rounded-lg border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm outline-none focus:border-forge"
+              className="w-40 rounded-lg border border-line bg-bg px-2 py-1.5 text-sm outline-none focus:border-forge"
             />
             <input
               name="description"
               defaultValue={a.description}
-              className="min-w-[160px] flex-1 rounded-lg border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm outline-none focus:border-forge"
+              className="min-w-[160px] flex-1 rounded-lg border border-line bg-bg px-2 py-1.5 text-sm outline-none focus:border-forge"
             />
             <input
               name="xp_reward"
               type="number"
               defaultValue={a.xp_reward}
-              className="w-20 rounded-lg border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm outline-none focus:border-forge"
+              className="w-20 rounded-lg border border-line bg-bg px-2 py-1.5 text-sm outline-none focus:border-forge"
             />
             <button className="rounded-lg bg-forge px-3 py-1.5 text-sm font-bold text-neutral-950 transition hover:bg-forge-soft">
               Save
@@ -50,49 +50,49 @@ export default async function AdminAchievements() {
         ))}
       </div>
 
-      <h3 className="mb-3 mt-8 text-sm font-bold uppercase tracking-wide text-neutral-400">
+      <h3 className="mb-3 mt-8 text-sm font-bold uppercase tracking-wide text-muted">
         Add achievement
       </h3>
       <form
         action={createAchievement}
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-neutral-700 p-4"
+        className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-line p-4"
       >
         <input
           name="key"
           placeholder="key (e.g. night_owl)"
           required
-          className="w-40 rounded-lg border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm outline-none focus:border-forge"
+          className="w-40 rounded-lg border border-line bg-bg px-2 py-1.5 text-sm outline-none focus:border-forge"
         />
         <input
           name="icon"
           placeholder="🦉"
           defaultValue="🏅"
-          className="w-16 rounded-lg border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm outline-none focus:border-forge"
+          className="w-16 rounded-lg border border-line bg-bg px-2 py-1.5 text-sm outline-none focus:border-forge"
         />
         <input
           name="name"
           placeholder="Name"
           required
-          className="w-40 rounded-lg border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm outline-none focus:border-forge"
+          className="w-40 rounded-lg border border-line bg-bg px-2 py-1.5 text-sm outline-none focus:border-forge"
         />
         <input
           name="description"
           placeholder="Description"
           required
-          className="min-w-[160px] flex-1 rounded-lg border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm outline-none focus:border-forge"
+          className="min-w-[160px] flex-1 rounded-lg border border-line bg-bg px-2 py-1.5 text-sm outline-none focus:border-forge"
         />
         <input
           name="xp_reward"
           type="number"
           placeholder="XP"
           defaultValue={50}
-          className="w-20 rounded-lg border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm outline-none focus:border-forge"
+          className="w-20 rounded-lg border border-line bg-bg px-2 py-1.5 text-sm outline-none focus:border-forge"
         />
         <button className="rounded-lg bg-forge px-3 py-1.5 text-sm font-bold text-neutral-950 transition hover:bg-forge-soft">
           Add
         </button>
       </form>
-      <p className="mt-3 text-xs text-neutral-500">
+      <p className="mt-3 text-xs text-muted">
         Heads up: a brand-new achievement needs a matching unlock rule added
         to <code>lib/game/achievements.ts</code> in code before anyone can
         actually earn it — this page only manages the catalog (name,

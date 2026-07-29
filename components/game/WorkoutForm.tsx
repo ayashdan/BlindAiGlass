@@ -7,6 +7,7 @@ import Link from "next/link";
 import { logWorkout } from "@/app/(app)/workout/actions";
 import AchievementCelebration from "./AchievementCelebration";
 import { MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
+import ShareButton from "@/components/ShareButton";
 import type { WorkoutResult } from "@/lib/types";
 
 const DIFFICULTIES = [
@@ -88,9 +89,9 @@ export default function WorkoutForm() {
           />
         )}
 
-        <div className="fade-in-up rounded-2xl border border-neutral-800 bg-neutral-900 p-8 text-center">
+        <div className="fade-in-up rounded-2xl border border-line bg-surface p-8 text-center">
           <div className="text-5xl">💪</div>
-          <p className="mt-3 text-sm font-semibold uppercase tracking-[0.3em] text-neutral-400">
+          <p className="mt-3 text-sm font-semibold uppercase tracking-[0.3em] text-muted">
             Workout complete
           </p>
           <p className="mt-2 text-4xl font-black text-forge">+{result.xpEarned} XP</p>
@@ -169,10 +170,30 @@ export default function WorkoutForm() {
             </div>
           )}
 
-          <div className="mt-8 flex flex-col gap-3">
+          {/* Share options — pick what to brag about */}
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            <ShareButton
+              label="Share workout"
+              text={`Just crushed a workout on Forge 💪 +${result.xpEarned} XP, 🔥${result.streak} day streak.`}
+            />
+            {result.newRecords.length > 0 && (
+              <ShareButton
+                label="Share PR"
+                text={`New PR on Forge 🏆 ${result.newRecords.map((r) => `${r.label}: ${r.value} min`).join(", ")}`}
+              />
+            )}
+            {result.unlocked.length > 0 && (
+              <ShareButton
+                label="Share achievement"
+                text={`Just unlocked "${result.unlocked.map((a) => a.name).join('", "')}" on Forge 🏅`}
+              />
+            )}
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3">
             <button
               onClick={reset}
-              className="press rounded-lg border border-neutral-800 py-3 font-bold transition hover:border-neutral-600"
+              className="press rounded-lg border border-line py-3 font-bold transition hover:border-forge/50"
             >
               Log another
             </button>
@@ -199,10 +220,10 @@ export default function WorkoutForm() {
 
       {/* Muscle groups (multi-select) */}
       <div>
-        <label className="mb-2 block text-sm font-semibold text-neutral-300">
+        <label className="mb-2 block text-sm font-semibold text-fg">
           Muscle groups worked
         </label>
-        <p className="mb-2 text-xs text-neutral-500">Tap all that apply.</p>
+        <p className="mb-2 text-xs text-muted">Tap all that apply.</p>
         <div className="grid grid-cols-3 gap-2">
           {MUSCLE_GROUPS.map((g) => {
             const active = muscleGroups.includes(g.key);
@@ -216,7 +237,7 @@ export default function WorkoutForm() {
                   "press rounded-lg border py-3 text-sm font-bold transition " +
                   (active
                     ? "border-forge bg-forge/15 text-forge"
-                    : "border-neutral-800 bg-neutral-900 text-neutral-300 hover:border-neutral-600")
+                    : "border-line bg-surface text-fg hover:border-forge/50")
                 }
               >
                 {g.label}
@@ -228,13 +249,13 @@ export default function WorkoutForm() {
           value={customName}
           onChange={(e) => setCustomName(e.target.value)}
           placeholder="Workout name (optional, e.g. Boxing)"
-          className="mt-3 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+          className="mt-3 w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
         />
       </div>
 
       {/* Duration */}
       <div>
-        <label className="mb-2 block text-sm font-semibold text-neutral-300">
+        <label className="mb-2 block text-sm font-semibold text-fg">
           Duration (minutes)
         </label>
         <input
@@ -245,13 +266,13 @@ export default function WorkoutForm() {
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
           placeholder="e.g. 45"
-          className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+          className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
         />
       </div>
 
       {/* Difficulty */}
       <div>
-        <label className="mb-2 block text-sm font-semibold text-neutral-300">
+        <label className="mb-2 block text-sm font-semibold text-fg">
           Difficulty
         </label>
         <div className="grid grid-cols-3 gap-2">
@@ -265,7 +286,7 @@ export default function WorkoutForm() {
                 "rounded-lg border py-3 text-sm font-bold transition " +
                 (difficulty === d.key
                   ? "border-forge bg-forge/15 text-forge"
-                  : "border-neutral-800 bg-neutral-900 text-neutral-300 hover:border-neutral-600")
+                  : "border-line bg-surface text-fg hover:border-forge/50")
               }
             >
               {d.label}
@@ -276,7 +297,7 @@ export default function WorkoutForm() {
 
       {/* Notes */}
       <div>
-        <label className="mb-2 block text-sm font-semibold text-neutral-300">
+        <label className="mb-2 block text-sm font-semibold text-fg">
           Notes (optional)
         </label>
         <textarea
@@ -284,7 +305,7 @@ export default function WorkoutForm() {
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
           placeholder="How did it go?"
-          className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 outline-none focus:border-forge"
+          className="w-full resize-none rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
         />
       </div>
 

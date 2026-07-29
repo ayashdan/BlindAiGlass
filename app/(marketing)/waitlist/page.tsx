@@ -16,7 +16,7 @@ export default async function WaitlistPage({
   if (!code || !data) {
     return (
       <main className="mx-auto max-w-md px-6 py-20 text-center">
-        <p className="text-neutral-400">
+        <p className="text-muted">
           We couldn&apos;t find that waitlist spot.
         </p>
         <Link href="/" className="mt-4 inline-block font-semibold text-forge">
@@ -43,22 +43,22 @@ export default async function WaitlistPage({
       <div className="text-5xl">🔥</div>
       <h1 className="mt-4 text-2xl font-black">You&apos;re on the list!</h1>
 
-      <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-900 p-8">
-        <p className="text-sm uppercase tracking-widest text-neutral-400">
+      <div className="mt-6 rounded-2xl border border-line bg-surface p-8">
+        <p className="text-sm uppercase tracking-widest text-muted">
           Your position
         </p>
         <p className="mt-1 text-5xl font-black text-forge">#{info.position}</p>
-        <p className="mt-1 text-sm text-neutral-400">of {info.total} in line</p>
+        <p className="mt-1 text-sm text-muted">of {info.total} in line</p>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
+      <div className="mt-6 rounded-2xl border border-line bg-surface p-6">
         <p className="font-bold">Invite friends to move up ⬆️</p>
-        <p className="mt-1 text-sm text-neutral-400">
+        <p className="mt-1 text-sm text-muted">
           Every friend who joins with your link bumps you higher. You&apos;ve
           referred <span className="font-semibold text-forge">{info.referral_count}</span>{" "}
           so far.
         </p>
-        <div className="mt-4 break-all rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-300">
+        <div className="mt-4 break-all rounded-lg border border-line bg-bg px-3 py-2 text-sm text-fg">
           {inviteUrl}
         </div>
         <div className="mt-3">
@@ -66,7 +66,7 @@ export default async function WaitlistPage({
         </div>
       </div>
 
-      <Link href="/" className="mt-8 inline-block text-sm text-neutral-500 hover:text-neutral-300">
+      <Link href="/" className="mt-8 inline-block text-sm text-muted hover:text-fg">
         ← Back home
       </Link>
     </main>

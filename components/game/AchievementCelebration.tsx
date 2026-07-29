@@ -34,7 +34,7 @@ export default function AchievementCelebration({
   if (achievements.length === 0) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-neutral-950/90 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-bg/90 backdrop-blur-sm">
       <div className="pointer-events-none absolute inset-0">
         {confetti.map((c) => (
           <span

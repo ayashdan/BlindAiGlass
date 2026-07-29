@@ -27,17 +27,17 @@ export default async function AdminLayout({
           </p>
           <h1 className="text-2xl font-black tracking-tight">Control room</h1>
         </div>
-        <Link href="/dashboard" className="text-sm text-neutral-400 hover:text-neutral-200">
+        <Link href="/dashboard" className="text-sm text-muted hover:text-fg">
           ← Back to app
         </Link>
       </div>
 
-      <nav className="mb-8 flex flex-wrap gap-2 border-b border-neutral-800 pb-4">
+      <nav className="mb-8 flex flex-wrap gap-2 border-b border-line pb-4">
         {TABS.map((t) => (
           <Link
             key={t.href}
             href={t.href}
-            className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-300 transition hover:border-forge hover:text-forge"
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-fg transition hover:border-forge hover:text-forge"
           >
             {t.label}
           </Link>

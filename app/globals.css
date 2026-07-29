@@ -2,12 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* Dark is the default (matches Forge's original identity); .light overrides
+   it when the user toggles. No class = dark, so there's no flash on first
+   paint for the common case. */
+:root,
+.dark {
   color-scheme: dark;
+  --bg: 10 10 10;
+  --surface: 23 23 23;
+  --surface-2: 38 38 38;
+  --line: 38 38 38;
+  --fg: 245 245 245;
+  --muted: 163 163 163;
+}
+
+.light {
+  color-scheme: light;
+  --bg: 250 250 250;
+  --surface: 255 255 255;
+  --surface-2: 244 244 245;
+  --line: 228 228 231;
+  --fg: 23 23 23;
+  --muted: 113 113 122;
 }
 
 body {
-  @apply bg-neutral-950 text-neutral-100 antialiased;
+  @apply bg-bg text-fg antialiased transition-colors duration-300;
 }
 
 /* ---- Phase 7: shared motion ---- */

@@ -41,16 +41,16 @@ export default async function HistoryPage() {
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
-      <Link href="/dashboard" className="text-sm text-neutral-400 hover:text-neutral-200">
+      <Link href="/dashboard" className="text-sm text-muted hover:text-fg">
         ← Back
       </Link>
       <h1 className="mb-1 mt-3 text-2xl font-black tracking-tight">Workout History</h1>
-      <p className="mb-6 text-sm text-neutral-400">
+      <p className="mb-6 text-sm text-muted">
         Your last {workouts.length} workout{workouts.length === 1 ? "" : "s"}.
       </p>
 
-      <section className="fade-in-up mb-6 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-        <p className="mb-3 text-sm font-black uppercase tracking-wide text-neutral-400">
+      <section className="fade-in-up mb-6 rounded-2xl border border-line bg-surface p-5">
+        <p className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
           Last {HEATMAP_WEEKS} weeks
         </p>
         <WorkoutHeatmap counts={counts} weeks={HEATMAP_WEEKS} />
@@ -60,11 +60,11 @@ export default async function HistoryPage() {
         {workouts.map((w, i) => (
           <div
             key={w.id}
-            className="fade-in-up rounded-xl border border-neutral-800 bg-neutral-900 p-4"
+            className="fade-in-up rounded-xl border border-line bg-surface p-4"
             style={{ animationDelay: `${Math.min(i, 10) * 0.03}s` }}
           >
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-muted">
                 {new Date(w.created_at).toLocaleDateString(undefined, {
                   weekday: "short",
                   month: "short",
@@ -79,21 +79,21 @@ export default async function HistoryPage() {
                 {w.muscle_groups.map((g: string) => (
                   <span
                     key={g}
-                    className="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300"
+                    className="rounded-full bg-surface2 px-2 py-0.5 text-xs text-fg"
                   >
                     {labelFor(g)}
                   </span>
                 ))}
               </div>
             )}
-            <p className="mt-2 text-xs text-neutral-500">
+            <p className="mt-2 text-xs text-muted">
               {w.duration_minutes} min · {w.difficulty}
             </p>
           </div>
         ))}
 
         {workouts.length === 0 && (
-          <p className="text-neutral-500">No workouts logged yet — go log your first one!</p>
+          <p className="text-muted">No workouts logged yet — go log your first one!</p>
         )}
       </div>
     </main>

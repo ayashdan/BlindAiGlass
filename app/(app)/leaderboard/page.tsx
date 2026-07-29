@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { resolveAvatar } from "@/lib/game/avatars";
+import AvatarDisplay from "@/components/AvatarDisplay";
 
 const PAGE_SIZE = 50;
 
@@ -23,7 +23,7 @@ export default async function LeaderboardPage({
 
   const { data: top } = await supabase
     .from("profiles")
-    .select("id, username, avatar, xp, level, rank, current_streak")
+    .select("id, username, avatar, avatar_url, xp, level, rank, current_streak, prestige")
     .order(by, { ascending: false })
     .limit(PAGE_SIZE);
 
@@ -54,11 +54,11 @@ export default async function LeaderboardPage({
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
-      <Link href="/dashboard" className="text-sm text-neutral-400 hover:text-neutral-200">
+      <Link href="/dashboard" className="text-sm text-muted hover:text-fg">
         ← Back
       </Link>
       <h1 className="mb-1 mt-3 text-2xl font-black tracking-tight">Leaderboard</h1>
-      <p className="mb-6 text-sm text-neutral-400">
+      <p className="mb-6 text-sm text-muted">
         Top Forgers, ranked by {by === "xp" ? "XP" : "streak"}.
       </p>
 
@@ -69,7 +69,7 @@ export default async function LeaderboardPage({
             "press rounded-lg border px-3 py-1.5 text-sm font-semibold transition " +
             (by === "xp"
               ? "border-forge bg-forge/15 text-forge"
-              : "border-neutral-800 text-neutral-300 hover:border-neutral-600")
+              : "border-line text-fg hover:border-forge/50")
           }
         >
           By XP
@@ -80,7 +80,7 @@ export default async function LeaderboardPage({
             "press rounded-lg border px-3 py-1.5 text-sm font-semibold transition " +
             (by === "current_streak"
               ? "border-forge bg-forge/15 text-forge"
-              : "border-neutral-800 text-neutral-300 hover:border-neutral-600")
+              : "border-line text-fg hover:border-forge/50")
           }
         >
           By Streak
@@ -95,18 +95,19 @@ export default async function LeaderboardPage({
               key={u.id}
               className={
                 "fade-in-up flex items-center gap-3 rounded-xl border p-3 " +
-                (mineRow ? "border-forge/50 bg-forge/10" : "border-neutral-800 bg-neutral-900")
+                (mineRow ? "border-forge/50 bg-forge/10" : "border-line bg-surface")
               }
               style={{ animationDelay: `${Math.min(i, 10) * 0.03}s` }}
             >
-              <span className="w-8 text-center font-black text-neutral-500">{medal(i)}</span>
-              <span className="text-xl">{resolveAvatar(u.avatar)}</span>
+              <span className="w-8 text-center font-black text-muted">{medal(i)}</span>
+              <AvatarDisplay avatarUrl={u.avatar_url} avatar={u.avatar} size={32} />
               <div className="flex-1">
                 <p className="font-bold">
+                  {u.prestige > 0 && <span className="mr-1 text-amber-400">⭐×{u.prestige}</span>}
                   {u.username}
                   {mineRow && <span className="ml-2 text-xs text-forge">(you)</span>}
                 </p>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-muted">
                   Level {u.level} · {u.rank}
                 </p>
               </div>
@@ -117,12 +118,12 @@ export default async function LeaderboardPage({
           );
         })}
 
-        {list.length === 0 && <p className="text-neutral-500">No one on the board yet.</p>}
+        {list.length === 0 && <p className="text-muted">No one on the board yet.</p>}
       </div>
 
       {myRank !== null && mine && (
         <div className="mt-4 rounded-xl border border-forge/50 bg-forge/10 p-3 text-center">
-          <p className="text-sm text-neutral-300">
+          <p className="text-sm text-fg">
             You're ranked <span className="font-black text-forge">#{myRank}</span> —{" "}
             {mine.username}, Level {mine.level}
           </p>

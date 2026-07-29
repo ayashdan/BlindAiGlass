@@ -16,16 +16,16 @@ export default async function AdminSettings() {
   return (
     <div>
       <h2 className="mb-4 text-lg font-black">Launch control</h2>
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-6">
+      <div className="rounded-xl border border-line bg-surface p-6">
         <p className="mb-1 font-bold">
           Status:{" "}
           {launched ? (
             <span className="text-forge">🚀 Launched — public sign-up is open</span>
           ) : (
-            <span className="text-neutral-400">🔒 Pre-launch — only the waitlist is public</span>
+            <span className="text-muted">🔒 Pre-launch — only the waitlist is public</span>
           )}
         </p>
-        <p className="mb-4 text-sm text-neutral-400">
+        <p className="mb-4 text-sm text-muted">
           While pre-launch, visitors can only join the waitlist — sign-up is
           blocked for everyone except the admin account. Flip this on when
           you're ready to open Forge to everyone.

@@ -189,6 +189,41 @@ Both are linked from the dashboard.
 - **Leaderboard + history** — from the previous update, now joined by
   Profile in a 3-tile row on the dashboard.
 
+### Tier B + C, plus visual redesign
+
+**Setup:** run these three migrations in order: `0011_avatar_photos.sql`,
+`0012_friends.sql`, `0013_prestige.sql`.
+
+- **Tier B — Friends** (`/friends`, linked from the dashboard) — add
+  someone by username, accept/decline requests, and see a small
+  leaderboard ranked by XP among just your friends. Competing against
+  people you actually know drives daily check-ins far better than a
+  global leaderboard full of strangers.
+- **Tier C — Prestige** — once you hit Level 100, your profile page shows
+  a "⭐ Prestige" option: resets your level/XP back to 1 but permanently
+  marks a prestige star next to your name everywhere (dashboard, profile,
+  leaderboard, friends). Purely cosmetic — your streaks, workouts, and
+  achievements are untouched. Gives veteran users a reason to keep going
+  past the old level cap.
+- **Light/dark mode** — a ☀️/🌙 toggle (dashboard header, landing page)
+  switches the whole app's theme instantly, saved in your browser. Dark
+  stays the default.
+- **More colorful UI** — the flat single-orange-accent look is gone.
+  Different card types now use distinct accent colors (gold for XP/level,
+  sky for streaks, violet for PRs/best-stats, emerald for quests, rose for
+  leaderboard, fuchsia for friends), matching the "Clash Royale" vibrancy
+  you asked for, while Forge's orange stays the primary brand color for
+  main actions.
+- **Social sharing** — a Share button appears on the workout reward screen
+  (with separate options for the workout itself, a new PR, and an
+  unlocked achievement when applicable) and on your profile. Uses your
+  phone's native share sheet when available, otherwise copies the text —
+  no paid service, no generated image, just an honest share.
+- **Real profile pictures** — upload a photo (max 3MB) on `/profile`
+  instead of just picking an emoji; it's stored in Supabase Storage (free
+  tier) and shows everywhere your avatar does. Remove it anytime to go
+  back to the emoji.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:

@@ -4,6 +4,7 @@ export type Profile = {
   id: string;
   username: string;
   avatar: string;
+  avatar_url: string | null; // an uploaded photo, if any — wins over `avatar` emoji
   xp: number; // total lifetime XP
   level: number;
   rank: string;
@@ -15,6 +16,7 @@ export type Profile = {
   created_at: string;
   streak_freezes: number;
   trained_muscle_groups: string[];
+  prestige: number;
 };
 
 // An achievement the user just unlocked.
