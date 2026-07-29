@@ -110,6 +110,53 @@ If all four work, Phase 1 is done. ✅
 
 ---
 
+## Phase 8 — daily quests + getting ready to launch
+
+- [x] **Daily quests** — each day you get 3 quests picked from a pool (Show
+  Up, Push/Pull/Leg Day, Endurance, Go Hard, Double Up), shown on the
+  dashboard. Completing one during a workout awards bonus XP immediately —
+  same XP engine as everything else, so it can't be faked from the browser.
+  Quest copy/XP live in code (`lib/game/quests.ts`) for now, same as
+  achievement unlock rules; they're not yet editable from the admin panel.
+
+### Phase 8 setup
+Run `supabase/migrations/0006_quests.sql` in Supabase SQL Editor (SQL Editor
+→ New query → paste → Run).
+
+### How to test daily quests
+1. Visit `/dashboard` — you should see a **"🎯 Today's quests"** card with 3
+   quests.
+2. Log a workout matching one of them (e.g. if "Push Day" is listed, log a
+   Push workout) — on the reward screen you should see a
+   **"Quest complete"** card with bonus XP, and the dashboard quest list
+   should show it checked off.
+3. Come back tomorrow (or change your system clock forward a day for
+   testing) — you should get a fresh set of 3 quests.
+
+### Launch checklist
+Things to do before you actually flip the switch and open Forge to
+everyone:
+1. **Turn email confirmation back ON** — Supabase → Authentication → Sign
+   In / Providers → Email → turn **"Confirm email" ON**. It was off this
+   whole time to make testing faster; leaving it off for real users means
+   anyone could sign up with an email they don't own.
+2. **Do one full test pass** as a normal (non-admin) user on the live site:
+   sign up, log a workout, unlock an achievement, complete a quest, check
+   the streak, log out, log back in.
+3. **Check your waitlist** at `/admin/waitlist` — export the CSV so you
+   have a backup of everyone who signed up, and see who your top referrers
+   are (they've been waiting the longest / brought the most people, so
+   they're a natural group to invite first if you want a staged rollout
+   instead of opening to everyone at once).
+4. **When you're ready:** go to `/admin/settings` and click **"🚀 Launch
+   Forge."** That's the only thing that opens public sign-up.
+5. Optional later: a custom domain instead of `forge-mot-ma1q.vercel.app`
+   — Vercel supports connecting one for free if you already own it, under
+   **Project Settings → Domains**. You don't need one to launch; the
+   `.vercel.app` link works fine.
+
+---
+
 ## Phase 6 setup — required before it works
 
 1. Run `supabase/migrations/0005_admin.sql` in Supabase SQL Editor (same as

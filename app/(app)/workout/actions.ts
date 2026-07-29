@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { applyXp } from "@/lib/game/xp-server";
 import { checkAndAwardAchievements } from "@/lib/game/achievements-server";
+import { checkAndCompleteQuests } from "@/lib/game/quests-server";
 import type { WorkoutResult } from "@/lib/types";
 
 const VALID_TYPES = ["push", "pull", "legs", "full", "custom"];
@@ -109,13 +110,29 @@ export async function logWorkout(input: {
     level: xp1.level,
   });
 
-  // ---- Award any achievement bonus XP (can trigger another level-up) ----
+  // ---- Check today's quests against today's workouts (including this one) ----
+  const todayStart = `${todayStr}T00:00:00.000Z`;
+  const { data: todaysWorkouts } = await supabase
+    .from("workouts")
+    .select("type, duration_minutes, difficulty")
+    .eq("user_id", user.id)
+    .gte("created_at", todayStart);
+  const rows = todaysWorkouts ?? [];
+  const quest = await checkAndCompleteQuests({
+    workoutsToday: rows.length,
+    typesToday: rows.map((r: any) => r.type as string),
+    maxDurationToday: rows.reduce((m: number, r: any) => Math.max(m, r.duration_minutes ?? 0), 0),
+    hardToday: rows.some((r: any) => r.difficulty === "hard"),
+  });
+
+  // ---- Award any achievement/quest bonus XP (can trigger another level-up) ----
   let level = xp1.level;
   let rank = xp1.rank;
   let leveledUp = xp1.leveledUp;
   let rankChanged = xp1.rankChanged;
-  if (ach.xpAwarded > 0) {
-    const xp2 = await applyXp(ach.xpAwarded);
+  const bonusXp = ach.xpAwarded + quest.xpAwarded;
+  if (bonusXp > 0) {
+    const xp2 = await applyXp(bonusXp);
     level = xp2.level;
     rank = xp2.rank;
     leveledUp = leveledUp || xp2.leveledUp;
@@ -126,12 +143,13 @@ export async function logWorkout(input: {
   revalidatePath("/achievements");
   return {
     ok: true,
-    xpEarned: xpEarned + streakBonus + ach.xpAwarded,
+    xpEarned: xpEarned + streakBonus + bonusXp,
     streak: newStreak,
     leveledUp,
     level,
     rank,
     rankChanged,
     unlocked: ach.unlocked,
+    questsCompleted: quest.completed,
   };
 }

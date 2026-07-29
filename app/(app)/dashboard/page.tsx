@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/(auth)/actions";
 import { levelProgress, rankForLevel } from "@/lib/game/leveling";
 import { isAdminEmail } from "@/lib/admin";
+import { ensureTodayQuests } from "@/lib/game/quests-server";
 import type { Profile } from "@/lib/types";
 
 // The logged-in home hub. Shows your level/XP/rank and stats, plus the main
@@ -35,6 +36,7 @@ export default async function Dashboard() {
 
   const progress = levelProgress(profile.xp);
   const rank = rankForLevel(progress.level);
+  const quests = await ensureTodayQuests();
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
@@ -110,9 +112,44 @@ export default async function Dashboard() {
         <span className="text-neutral-400">View →</span>
       </Link>
 
-      <p className="mt-8 text-center text-sm text-neutral-500">
-        Daily quests arrive in the next phase.
-      </p>
+      {/* Today's quests */}
+      {quests.length > 0 && (
+        <section
+          className="fade-in-up mt-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
+          style={{ animationDelay: "0.2s" }}
+        >
+          <p className="mb-3 text-sm font-black uppercase tracking-wide text-neutral-400">
+            🎯 Today's quests
+          </p>
+          <div className="space-y-2">
+            {quests.map((q) => (
+              <div
+                key={q.key}
+                className={
+                  "flex items-center gap-3 rounded-lg border px-3 py-2 transition " +
+                  (q.completed
+                    ? "border-forge/40 bg-forge/5"
+                    : "border-neutral-800 bg-neutral-950")
+                }
+              >
+                <span className="text-xl">{q.completed ? "✅" : q.icon}</span>
+                <div className="flex-1">
+                  <p
+                    className={
+                      "text-sm font-bold " +
+                      (q.completed ? "text-neutral-400 line-through" : "")
+                    }
+                  >
+                    {q.title}
+                  </p>
+                  <p className="text-xs text-neutral-500">{q.description}</p>
+                </div>
+                <span className="text-xs font-semibold text-forge">+{q.xpReward} XP</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

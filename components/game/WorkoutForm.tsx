@@ -124,6 +124,23 @@ export default function WorkoutForm() {
             </div>
           )}
 
+          {result.questsCompleted.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {result.questsCompleted.map((q, i) => (
+                <div
+                  key={q.key}
+                  className="celebrate-pop rounded-xl border border-forge/40 bg-forge/10 p-3"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                >
+                  <p className="font-bold">
+                    {q.icon} Quest complete: {q.title}
+                  </p>
+                  <p className="text-sm text-forge">+{q.xpReward} XP</p>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="mt-8 flex flex-col gap-3">
             <button
               onClick={reset}
