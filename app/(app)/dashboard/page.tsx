@@ -112,6 +112,25 @@ export default async function Dashboard() {
         <span className="text-neutral-400">View →</span>
       </Link>
 
+      {/* Leaderboard + history */}
+      <div
+        className="fade-in-up mt-4 grid grid-cols-2 gap-3"
+        style={{ animationDelay: "0.18s" }}
+      >
+        <Link
+          href="/leaderboard"
+          className="flex flex-col items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-4 text-center transition hover:border-neutral-600"
+        >
+          <span className="font-bold">🏆 Leaderboard</span>
+        </Link>
+        <Link
+          href="/history"
+          className="flex flex-col items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-4 text-center transition hover:border-neutral-600"
+        >
+          <span className="font-bold">📜 History</span>
+        </Link>
+      </div>
+
       {/* Today's quests */}
       {quests.length > 0 && (
         <section

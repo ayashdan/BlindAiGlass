@@ -144,6 +144,16 @@ as Push Day) instead of a single fixed type.
 **Setup:** run `supabase/migrations/0007_muscle_groups.sql` in Supabase SQL
 Editor.
 
+### Leaderboard + workout history
+- **Leaderboard** (`/leaderboard`) — ranks everyone by XP or streak (toggle
+  between the two), highlights your own row, and shows your rank even if
+  you're outside the visible top 50. No migration needed — it reads the
+  already-public `profiles` table.
+- **History** (`/history`) — your last 30 workouts, newest first, showing
+  muscle groups, duration, difficulty, and XP earned for each.
+
+Both are linked from the dashboard.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:

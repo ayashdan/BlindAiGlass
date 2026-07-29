@@ -1,0 +1,78 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
+
+const PAGE_SIZE = 30;
+
+// A read-only list of your past workouts, newest first.
+export default async function HistoryPage() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data } = await supabase
+    .from("workouts")
+    .select("id, muscle_groups, custom_name, duration_minutes, difficulty, xp_earned, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(PAGE_SIZE);
+
+  const workouts = (data ?? []) as any[];
+  const labelFor = (key: string) => MUSCLE_GROUPS.find((g) => g.key === key)?.label ?? key;
+
+  return (
+    <main className="mx-auto max-w-lg px-6 py-12">
+      <Link href="/dashboard" className="text-sm text-neutral-400 hover:text-neutral-200">
+        ← Back
+      </Link>
+      <h1 className="mb-1 mt-3 text-2xl font-black tracking-tight">Workout History</h1>
+      <p className="mb-6 text-sm text-neutral-400">
+        Your last {workouts.length} workout{workouts.length === 1 ? "" : "s"}.
+      </p>
+
+      <div className="space-y-3">
+        {workouts.map((w, i) => (
+          <div
+            key={w.id}
+            className="fade-in-up rounded-xl border border-neutral-800 bg-neutral-900 p-4"
+            style={{ animationDelay: `${Math.min(i, 10) * 0.03}s` }}
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs text-neutral-500">
+                {new Date(w.created_at).toLocaleDateString(undefined, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </p>
+              <span className="text-sm font-semibold text-forge">+{w.xp_earned} XP</span>
+            </div>
+            {w.custom_name && <p className="mb-1 font-bold">{w.custom_name}</p>}
+            {(w.muscle_groups?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {w.muscle_groups.map((g: string) => (
+                  <span
+                    key={g}
+                    className="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300"
+                  >
+                    {labelFor(g)}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="mt-2 text-xs text-neutral-500">
+              {w.duration_minutes} min · {w.difficulty}
+            </p>
+          </div>
+        ))}
+
+        {workouts.length === 0 && (
+          <p className="text-neutral-500">No workouts logged yet — go log your first one!</p>
+        )}
+      </div>
+    </main>
+  );
+}
