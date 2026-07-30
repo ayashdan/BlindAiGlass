@@ -393,6 +393,30 @@ a phone's home screen and opens like a native app (no browser bar).
   is almost certainly why the 🔔 button didn't work. Install the app first
   via the new 📲 button, then try 🔔 again from inside the installed app.
 
+### Twice-daily reminders + test notification button
+
+No migration — pure code/config.
+
+- `vercel.json` now schedules the streak-reminder cron **twice a day**
+  (12pm and 8pm UTC) instead of once.
+- **Important free-tier caveat:** Vercel's Hobby (free) plan has
+  historically limited Cron Jobs to firing **once per day**, regardless of
+  how many entries or what schedule you set — this may get silently capped
+  to a single daily run. Redeploy and watch it for a couple of days; if
+  you only ever see one notification a day, that's Vercel's Hobby limit,
+  not a bug here. Free workaround if that happens: use
+  **[cron-job.org](https://cron-job.org)** (free, no card) to `GET` your
+  `https://your-app.vercel.app/api/cron/streak-reminder` URl with header
+  `Authorization: Bearer <your CRON_SECRET>` on whatever schedule you want
+  — it calls the same endpoint, Vercel's cron limit doesn't apply since
+  the request isn't coming from Vercel's own scheduler.
+- **Test notification button** — `/admin/settings` → "🔔 Send me a test
+  notification" sends an immediate push to your own device(s), as long as
+  you've already tapped 🔔 on the dashboard on that device. This is the
+  fastest way to confirm the whole pipeline (VAPID keys, subscription,
+  service worker) actually works, without waiting for the schedule or
+  faking a streak.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:

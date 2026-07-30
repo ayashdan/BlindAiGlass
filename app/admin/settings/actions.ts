@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendPushToUser } from "@/lib/push-server";
 
 export async function setLaunched(formData: FormData) {
   await requireAdmin();
@@ -38,4 +39,17 @@ export async function startNewSeason() {
 
   revalidatePath("/admin/settings");
   revalidatePath("/dashboard");
+}
+
+// Sends a push notification to whichever admin account clicks the button
+// (only fires to devices where that account already enabled 🔔). Useful for
+// checking the push pipeline actually works without waiting for the daily
+// cron or faking a streak.
+export async function sendTestNotification() {
+  const user = await requireAdmin();
+  await sendPushToUser(user.id, {
+    title: "🔥 Forge test",
+    body: "If you can see this, push notifications are working!",
+    url: "/dashboard",
+  });
 }

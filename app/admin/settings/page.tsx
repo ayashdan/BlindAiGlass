@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { setLaunched, startNewSeason } from "./actions";
+import { setLaunched, startNewSeason, sendTestNotification } from "./actions";
 
 // The one switch that matters pre-launch: flips public sign-up on/off.
 // While off, app/(auth)/actions.ts blocks everyone but the admin from
@@ -59,6 +59,22 @@ export default async function AdminSettings() {
         <form action={startNewSeason}>
           <button className="rounded-lg border border-line px-4 py-2 font-bold text-fg transition hover:border-forge/50">
             Start Season {parseInt(seasonNumber, 10) + 1}
+          </button>
+        </form>
+      </div>
+
+      <h2 className="mb-4 mt-8 text-lg font-black">Notifications</h2>
+      <div className="rounded-xl border border-line bg-surface p-6">
+        <p className="mb-1 font-bold">Streak reminders</p>
+        <p className="mb-4 text-sm text-muted">
+          Fires twice daily (12pm and 8pm UTC — see <code>vercel.json</code>) to
+          anyone with an active streak who hasn't worked out yet that day.
+          Click below to send yourself a one-off test right now (only
+          reaches devices where you've already tapped 🔔 on the dashboard).
+        </p>
+        <form action={sendTestNotification}>
+          <button className="rounded-lg border border-line px-4 py-2 font-bold text-fg transition hover:border-forge/50">
+            🔔 Send me a test notification
           </button>
         </form>
       </div>
