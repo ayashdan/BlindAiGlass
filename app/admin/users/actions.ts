@@ -18,3 +18,18 @@ export async function deleteUser(formData: FormData) {
   revalidatePath("/admin/users");
   revalidatePath("/admin");
 }
+
+// Manual tier control — not a payment system, no money moves through the
+// app. Just a flag the admin flips by hand.
+export async function setUserTier(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") || "");
+  const tier = String(formData.get("tier") || "");
+  if (!id || (tier !== "free" && tier !== "premium")) return;
+
+  const admin = createAdminClient();
+  await admin.from("profiles").update({ tier }).eq("id", id);
+
+  revalidatePath("/admin/users");
+  revalidatePath("/profile");
+}

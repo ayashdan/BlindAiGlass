@@ -97,9 +97,16 @@ export default async function ProfilePage({
         {profile.equipped_title && (
           <p className="mt-0.5 text-sm text-muted">"{profile.equipped_title}"</p>
         )}
-        <span className="mt-2 inline-block rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
-          {rank} · Level {progress.level}
-        </span>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          <span className="inline-block rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
+            {rank} · Level {progress.level}
+          </span>
+          {profile.tier === "premium" && (
+            <span className="inline-block rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
+              ⭐ Premium
+            </span>
+          )}
+        </div>
         <p className="mt-2 text-sm text-muted">
           {classInfo.icon} <span className="font-bold">{charClass}</span> — {classInfo.blurb}
         </p>

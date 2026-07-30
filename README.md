@@ -443,6 +443,29 @@ paywalling basics would feel predatory rather than premium. A future
 paid tier should add optional extras (more cosmetics, etc.), not
 withhold things people already expect from a free fitness app.
 
+### Manual tier control (admin)
+
+Run this migration in Supabase SQL Editor:
+
+```sql
+alter table public.profiles
+  add column if not exists tier text not null default 'free';
+
+alter table public.profiles
+  drop constraint if exists profiles_tier_check;
+alter table public.profiles
+  add constraint profiles_tier_check check (tier in ('free', 'premium'));
+```
+
+**Not a payment system** — no money moves through the app anywhere. This
+is just a flag on each account (`free` or `premium`) that only you can
+flip, from `/admin/users` → **"Make Premium"** / **"Move to Free"** next
+to any user. Useful for comping accounts, testers, or manually marking
+someone premium if they paid you some other way while the real payment
+question is still on hold. Nothing in the app is gated on this yet — it
+just shows a ⭐ Premium badge next to their name in the admin list and on
+their own profile page.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:

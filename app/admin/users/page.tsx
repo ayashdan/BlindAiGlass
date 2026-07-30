@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { deleteUser } from "./actions";
+import { deleteUser, setUserTier } from "./actions";
 
 // Search, view, and delete users. Uses the service-role client so it can see
 // everyone regardless of RLS.
@@ -42,7 +42,10 @@ export default async function AdminUsers({
             <div>
               <p className="font-bold">
                 {u.username}{" "}
-                {u.is_admin && <span className="text-xs text-forge">admin</span>}
+                {u.is_admin && <span className="text-xs text-forge">admin</span>}{" "}
+                {u.tier === "premium" && (
+                  <span className="text-xs text-amber-400">⭐ premium</span>
+                )}
               </p>
               <p className="text-sm text-muted">
                 Level {u.level} · {u.rank} · 🔥{u.current_streak} (best {u.longest_streak}) ·{" "}
@@ -52,12 +55,28 @@ export default async function AdminUsers({
                 Joined {new Date(u.created_at).toLocaleDateString()}
               </p>
             </div>
-            <form action={deleteUser}>
-              <input type="hidden" name="id" value={u.id} />
-              <button className="rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-300 transition hover:bg-red-500/10">
-                Delete
-              </button>
-            </form>
+            <div className="flex items-center gap-2">
+              <form action={setUserTier}>
+                <input type="hidden" name="id" value={u.id} />
+                <input type="hidden" name="tier" value={u.tier === "premium" ? "free" : "premium"} />
+                <button
+                  className={
+                    "rounded-lg border px-3 py-1.5 text-sm font-semibold transition " +
+                    (u.tier === "premium"
+                      ? "border-line text-muted hover:border-forge/50"
+                      : "border-amber-500/40 text-amber-400 hover:bg-amber-500/10")
+                  }
+                >
+                  {u.tier === "premium" ? "Move to Free" : "Make Premium"}
+                </button>
+              </form>
+              <form action={deleteUser}>
+                <input type="hidden" name="id" value={u.id} />
+                <button className="rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-300 transition hover:bg-red-500/10">
+                  Delete
+                </button>
+              </form>
+            </div>
           </div>
         ))}
         {users.length === 0 && (
