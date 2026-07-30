@@ -31,7 +31,7 @@ export async function inviteFromWaitlist(formData: FormData) {
 
   const host = headers().get("host");
   const protocol = host?.startsWith("localhost") ? "http" : "https";
-  const redirectTo = host ? `${protocol}://${host}/dashboard` : undefined;
+  const redirectTo = host ? `${protocol}://${host}/auth/callback?next=/dashboard` : undefined;
 
   await admin.auth.admin.inviteUserByEmail(email, {
     data: { username: deriveUsername(name, email) },
