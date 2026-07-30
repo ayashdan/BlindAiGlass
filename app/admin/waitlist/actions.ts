@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -33,10 +34,32 @@ export async function inviteFromWaitlist(formData: FormData) {
   const protocol = host?.startsWith("localhost") ? "http" : "https";
   const redirectTo = host ? `${protocol}://${host}/auth/callback?next=/dashboard` : undefined;
 
-  await admin.auth.admin.inviteUserByEmail(email, {
+  const { error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { username: deriveUsername(name, email) },
     redirectTo,
   });
+
+  if (error) {
+    // Someone who already has an account (e.g. they signed up manually
+    // through the fallback form while we were debugging) can't be
+    // "invited" again — Supabase rejects that. Send them a sign-in link
+    // instead: it goes through the same /auth/callback route and still
+    // gets them straight into the app, no password needed.
+    const alreadyHasAccount = /already registered|already exists/i.test(error.message);
+    if (alreadyHasAccount) {
+      const { error: linkError } = await admin.auth.resetPasswordForEmail(email, { redirectTo });
+      if (linkError) {
+        redirect(
+          "/admin/waitlist?error=" +
+            encodeURIComponent(`Couldn't email ${email}: ${linkError.message}`)
+        );
+      }
+    } else {
+      redirect(
+        "/admin/waitlist?error=" + encodeURIComponent(`Couldn't email ${email}: ${error.message}`)
+      );
+    }
+  }
 
   // Also mark them invited so the manual sign-up form (is_invited check)
   // works too, as a fallback if the emailed link ever fails to arrive.

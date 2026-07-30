@@ -4,7 +4,11 @@ import { inviteFromWaitlist, uninviteFromWaitlist } from "./actions";
 // The waitlist table has RLS on with zero public policies, so the only way to
 // read the raw list (emails, referral counts) is through this service-role
 // client — never exposed to the browser.
-export default async function AdminWaitlist() {
+export default async function AdminWaitlist({
+  searchParams,
+}: {
+  searchParams: { error?: string };
+}) {
   const admin = createAdminClient();
   const { data } = await admin
     .from("waitlist")
@@ -16,6 +20,11 @@ export default async function AdminWaitlist() {
 
   return (
     <div>
+      {searchParams?.error && (
+        <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          {searchParams.error}
+        </div>
+      )}
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted">{list.length} on the waitlist</p>
         <a
