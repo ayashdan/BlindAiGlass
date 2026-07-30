@@ -1,10 +1,10 @@
 "use client";
 
 // Supabase invite/reset-password links hand back a session as a URL
-// fragment (#access_token=...) rather than a query param — fragments never
-// reach the server, so this HAS to run in the browser. The Supabase client
-// auto-detects and consumes that fragment (or a ?code= param) on load; we
-// just wait for the resulting session and then move on to the dashboard.
+// fragment (#access_token=...) rather than a ?code= query param — but our
+// browser client is configured for PKCE flow, which only ever looks for
+// ?code= and ignores fragments. So auto-detection never fires here; we
+// have to parse the fragment ourselves and set the session directly.
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -18,22 +18,41 @@ function AuthCallback() {
     const supabase = createClient();
     const next = searchParams.get("next") || "/dashboard";
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) router.replace(next);
-    });
+    async function run() {
+      const hash = window.location.hash.startsWith("#")
+        ? window.location.hash.slice(1)
+        : "";
+      const hashParams = new URLSearchParams(hash);
+      const access_token = hashParams.get("access_token");
+      const refresh_token = hashParams.get("refresh_token");
 
-    // In case a session already exists by the time this mounts (or the
-    // fragment never had one to begin with).
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace(next);
-    });
+      if (access_token && refresh_token) {
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+        if (!error) {
+          router.replace(next);
+          return;
+        }
+      }
 
-    const timeout = setTimeout(() => setError(true), 6000);
+      const code = searchParams.get("code");
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          router.replace(next);
+          return;
+        }
+      }
 
-    return () => {
-      subscription.subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.replace(next);
+        return;
+      }
+
+      setError(true);
+    }
+
+    run();
   }, [router, searchParams]);
 
   return (
