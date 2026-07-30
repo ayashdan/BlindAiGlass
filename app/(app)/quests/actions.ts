@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { completeManualQuest } from "@/lib/game/quests-server";
+import { completeManualQuest, chooseSplit as chooseSplitServer } from "@/lib/game/quests-server";
 import { applyXp } from "@/lib/game/xp-server";
 
 // Self-reported quests (stretch, hydrate, sleep, steps) can't be verified
@@ -12,5 +12,13 @@ export async function completeQuest(formData: FormData) {
   if (result.xpAwarded > 0) {
     await applyXp(result.xpAwarded);
   }
+  revalidatePath("/dashboard");
+}
+
+// "I'm training Push/Pull/Legs today" — guarantees the matching quest
+// shows up instead of a randomly-assigned, possibly-mismatched one.
+export async function chooseSplit(formData: FormData) {
+  const split = String(formData.get("split") || "");
+  await chooseSplitServer(split);
   revalidatePath("/dashboard");
 }

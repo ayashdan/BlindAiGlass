@@ -146,3 +146,36 @@ export async function completeManualQuest(
     xpAwarded: row.xp_reward,
   };
 }
+
+// Records which split the user is training today and guarantees a matching
+// Push/Pull/Leg Day quest exists for today — never a randomly-assigned,
+// possibly-mismatched one.
+export async function chooseSplit(split: string): Promise<{ ok: boolean }> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false };
+
+  const tmpl = QUEST_TEMPLATES.find((q) => q.key === split && q.group === "split");
+  if (!tmpl) return { ok: false };
+
+  const date = todayStr();
+
+  await supabase
+    .from("profiles")
+    .update({ split_choice_date: date, split_choice: split })
+    .eq("id", user.id);
+
+  // Idempotent: adds today's matching split quest if it isn't already
+  // there. Only sets the columns below, so it won't reset completion
+  // status if the quest somehow already exists and is done.
+  await supabase
+    .from("daily_quests")
+    .upsert(
+      { user_id: user.id, quest_date: date, quest_key: split, xp_reward: tmpl.xpReward },
+      { onConflict: "user_id,quest_date,quest_key" }
+    );
+
+  return { ok: true };
+}

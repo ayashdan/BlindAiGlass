@@ -417,6 +417,32 @@ No migration — pure code/config.
   service worker) actually works, without waiting for the schedule or
   faking a streak.
 
+### Choose today's split (free)
+
+Run this migration in Supabase SQL Editor:
+
+```sql
+alter table public.profiles
+  add column if not exists split_choice_date date,
+  add column if not exists split_choice text;
+```
+
+Fixes a real complaint: the Push/Pull/Leg Day quest used to be randomly
+assigned and could not match what you actually planned to train. Now
+there's a "What are you training today?" card on the dashboard — pick
+Push/Pull/Leg Day and that exact quest is guaranteed to show up (instead
+of possibly a different, unrelated one). Random quests still fill the
+other slots as before. Once picked, it's locked for the day.
+
+**Product note for later:** we talked through a possible paid tier and
+paused on writing any payment code since that needs a parent/guardian
+conversation first (Stripe requires an 18+ or business account holder).
+Whenever that's resolved, keep core logging flexibility (multiple
+workouts/day, custom names, cardio, split choice) free regardless —
+paywalling basics would feel predatory rather than premium. A future
+paid tier should add optional extras (more cosmetics, etc.), not
+withhold things people already expect from a free fitness app.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:

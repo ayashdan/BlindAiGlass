@@ -127,25 +127,26 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
 
 export const QUESTS_PER_DAY = 3;
 
+// "split" quests (Push/Pull/Leg Day) are never part of the random daily
+// draw — they only ever get added when the user explicitly chooses their
+// split for the day (see chooseSplit in app/(app)/quests/actions.ts), so
+// they're always accurate to what's actually being trained, never random.
+export const RANDOM_POOL = QUEST_TEMPLATES.filter((q) => q.group !== "split");
+
 // Picks QUESTS_PER_DAY template keys, seeded so the same (user, date) pair
 // always gets the same set — no reshuffling if this runs more than once
-// before the DB rows are created. Never picks two templates from the same
-// `group` (e.g. two different splits) on the same day.
-export function pickDailyQuestKeys(seed: string): string[] {
+// before the DB rows are created.
+export function pickDailyQuestKeys(seed: string, pool: QuestTemplate[] = RANDOM_POOL): string[] {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
 
-  const pool = QUEST_TEMPLATES.slice();
+  const candidates = pool.slice();
   const picked: string[] = [];
-  const usedGroups = new Set<string>();
 
-  while (picked.length < QUESTS_PER_DAY && pool.length > 0) {
+  while (picked.length < QUESTS_PER_DAY && candidates.length > 0) {
     h = (h * 1103515245 + 12345) >>> 0;
-    const idx = h % pool.length;
-    const candidate = pool.splice(idx, 1)[0];
-    if (candidate.group && usedGroups.has(candidate.group)) continue;
-    picked.push(candidate.key);
-    if (candidate.group) usedGroups.add(candidate.group);
+    const idx = h % candidates.length;
+    picked.push(candidates.splice(idx, 1)[0].key);
   }
   return picked;
 }

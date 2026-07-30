@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { levelProgress, rankForLevel } from "@/lib/game/leveling";
 import { isAdminEmail } from "@/lib/admin";
 import { ensureTodayQuests } from "@/lib/game/quests-server";
-import { completeQuest } from "@/app/(app)/quests/actions";
+import { completeQuest, chooseSplit } from "@/app/(app)/quests/actions";
 import { logRestDay } from "@/app/(app)/recovery/actions";
 import { dailyMotivation } from "@/lib/game/motivation";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
@@ -96,6 +96,12 @@ export default async function Dashboard() {
   }
 
   const canLogRest = profile.last_workout_date !== todayStr && profile.last_rest_date !== todayStr;
+  const splitChosenToday = profile.split_choice_date === todayStr ? profile.split_choice : null;
+  const SPLIT_LABELS: Record<string, string> = {
+    push_day: "💪 Push Day",
+    pull_day: "🏋️ Pull Day",
+    leg_day: "🦵 Leg Day",
+  };
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
@@ -330,6 +336,38 @@ export default async function Dashboard() {
           <span className="text-sm font-bold">👤 Profile</span>
         </Link>
       </div>
+
+      {/* Choose today's split */}
+      <section
+        className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
+        style={{ animationDelay: "0.19s" }}
+      >
+        {splitChosenToday ? (
+          <p className="text-sm">
+            <span className="font-black uppercase tracking-wide text-muted">Today: </span>
+            <span className="font-bold">{SPLIT_LABELS[splitChosenToday] ?? splitChosenToday}</span>
+          </p>
+        ) : (
+          <>
+            <p className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
+              What are you training today?
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {(["push_day", "pull_day", "leg_day"] as const).map((key) => (
+                <form key={key} action={chooseSplit}>
+                  <input type="hidden" name="split" value={key} />
+                  <button className="press w-full rounded-lg border border-line bg-bg py-2.5 text-sm font-bold text-fg transition hover:border-forge/50">
+                    {SPLIT_LABELS[key]}
+                  </button>
+                </form>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              Locks in a matching quest instead of a random one.
+            </p>
+          </>
+        )}
+      </section>
 
       {/* Today's quests */}
       {quests.length > 0 && (

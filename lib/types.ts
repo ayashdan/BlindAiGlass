@@ -25,6 +25,8 @@ export type Profile = {
   equipped_title: string | null;
   last_rest_date: string | null;
   recovery_bonus_pct: number;
+  split_choice_date: string | null;
+  split_choice: string | null;
 };
 
 // An achievement the user just unlocked.
