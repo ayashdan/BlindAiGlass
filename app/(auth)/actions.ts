@@ -26,18 +26,23 @@ export async function signUp(formData: FormData) {
 
   const supabase = createClient();
 
-  // Pre-launch gate: until the app is launched, only the admin can create an
-  // account. Everyone else is sent to the waitlist.
+  // Pre-launch gate: until the app is launched, only the admin and anyone
+  // explicitly invited from the waitlist can create an account. Everyone
+  // else is sent to the waitlist.
   const { data: setting } = await supabase
     .from("app_settings")
     .select("value")
     .eq("key", "launched")
     .maybeSingle();
   const launched = setting?.value === "true";
+
   if (!launched && !isAdminEmail(email)) {
-    redirect(
-      "/?error=" + encodeURIComponent("Forge hasn't launched yet — join the waitlist!")
-    );
+    const { data: invited } = await supabase.rpc("is_invited", { p_email: email });
+    if (invited !== true) {
+      redirect(
+        "/?error=" + encodeURIComponent("Forge hasn't launched yet — join the waitlist!")
+      );
+    }
   }
 
   // Make sure the username isn't already taken.

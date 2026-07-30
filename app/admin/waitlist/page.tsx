@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { inviteFromWaitlist, uninviteFromWaitlist } from "./actions";
 
 // The waitlist table has RLS on with zero public policies, so the only way to
 // read the raw list (emails, referral counts) is through this service-role
@@ -24,6 +25,11 @@ export default async function AdminWaitlist() {
           Export CSV
         </a>
       </div>
+      <p className="mb-4 text-xs text-muted">
+        "Invite" lets that person sign up right now, even while pre-launch —
+        no email gets sent (Forge doesn't send outbound email yet), so let
+        them know yourself.
+      </p>
 
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full text-left text-sm">
@@ -34,6 +40,7 @@ export default async function AdminWaitlist() {
               <th className="px-4 py-2">Name</th>
               <th className="px-4 py-2">Referrals</th>
               <th className="px-4 py-2">Joined</th>
+              <th className="px-4 py-2">Invite</th>
             </tr>
           </thead>
           <tbody>
@@ -45,6 +52,23 @@ export default async function AdminWaitlist() {
                 <td className="px-4 py-2 font-semibold text-forge">{w.referral_count}</td>
                 <td className="px-4 py-2 text-muted">
                   {new Date(w.created_at).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-2">
+                  {w.invited ? (
+                    <form action={uninviteFromWaitlist}>
+                      <input type="hidden" name="id" value={w.id} />
+                      <button className="rounded-lg border border-amber-500/40 px-3 py-1 text-xs font-semibold text-amber-400 transition hover:bg-amber-500/10">
+                        ⭐ Invited — revoke
+                      </button>
+                    </form>
+                  ) : (
+                    <form action={inviteFromWaitlist}>
+                      <input type="hidden" name="id" value={w.id} />
+                      <button className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-fg transition hover:border-forge hover:text-forge">
+                        Invite
+                      </button>
+                    </form>
+                  )}
                 </td>
               </tr>
             ))}

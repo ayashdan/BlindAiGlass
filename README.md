@@ -466,6 +466,41 @@ question is still on hold. Nothing in the app is gated on this yet — it
 just shows a ⭐ Premium badge next to their name in the admin list and on
 their own profile page.
 
+### Invite specific people from the waitlist
+
+Run this migration in Supabase SQL Editor:
+
+```sql
+alter table public.waitlist
+  add column if not exists invited boolean not null default false,
+  add column if not exists invited_at timestamptz;
+
+create or replace function public.is_invited(p_email text)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.waitlist
+    where email = lower(trim(p_email)) and invited = true
+  );
+$$;
+
+grant execute on function public.is_invited(text) to anon, authenticated;
+```
+
+Before this, the launch switch was all-or-nothing: either everyone could
+sign up, or only you could. Now, on `/admin/waitlist`, every row has an
+**"Invite"** button — click it and that specific email can create an
+account right now, even while pre-launch, without opening it to everyone
+else. Click "revoke" to undo it.
+
+**No email gets sent** — Forge doesn't have outbound email set up (that'd
+need a service like Resend, which is free but is a separate signup you
+haven't made). Invite them here, then just tell them yourself (text, DM,
+whatever) that they can go sign up now.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:
