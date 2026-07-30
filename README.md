@@ -372,6 +372,27 @@ you have an active streak and haven't worked out today.
 Supabase queries in parallel (quests, season status, friends) instead of
 one-at-a-time — same data, faster page load, no visible change.
 
+### Installable as a real app (PWA)
+
+No migration needed — this is pure code/config. Forge can now be added to
+a phone's home screen and opens like a native app (no browser bar).
+
+- `app/manifest.ts` — Next.js auto-serves this at `/manifest.webmanifest`
+  with the app name, orange theme color, dark background, and a generated
+  flame icon (`public/icon-192.png` / `icon-512.png`).
+- iOS-specific meta tags in `app/layout.tsx` — iOS Safari ignores the web
+  manifest for "Add to Home Screen," so these control its standalone
+  behavior and icon there.
+- **Install button** (📲) on the dashboard header — on Android/Chrome/Edge
+  it triggers the real native install prompt; on iOS (which has no such
+  API) it shows a small hint pointing at Share → Add to Home Screen. Once
+  installed, the button disappears.
+- This also matters for the push notifications from the last update: **iOS
+  Safari only supports web push for apps installed to the home screen** —
+  if you tested notifications on an iPhone in a regular Safari tab, this
+  is almost certainly why the 🔔 button didn't work. Install the app first
+  via the new 📲 button, then try 🔔 again from inside the installed app.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:

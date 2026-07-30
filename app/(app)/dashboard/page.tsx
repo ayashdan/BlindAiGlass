@@ -13,6 +13,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import ShareButton from "@/components/ShareButton";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import NotificationOptIn from "@/components/NotificationOptIn";
+import InstallPrompt from "@/components/InstallPrompt";
 import type { Profile } from "@/lib/types";
 
 // The logged-in home hub. Shows your character build, level/XP/rank,
@@ -119,7 +120,8 @@ export default async function Dashboard() {
             </h1>
           </div>
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <InstallPrompt />
           <NotificationOptIn />
           <ThemeToggle />
           {isAdminEmail(user.email) && (
