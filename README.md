@@ -501,6 +501,32 @@ need a service like Resend, which is free but is a separate signup you
 haven't made). Invite them here, then just tell them yourself (text, DM,
 whatever) that they can go sign up now.
 
+### Invite now sends a real magic-link email — no signup form needed
+
+No new migration (reuses last update's `invited` column). **One required
+Supabase dashboard setting though:**
+
+1. Supabase → **Authentication → URL Configuration**
+2. Add your live site to **Redirect URLs**, e.g.
+   `https://forge-mot-ma1q.vercel.app/**` (the `/**` wildcard covers every
+   page). Without this, Supabase will ignore the link's destination and
+   send them somewhere wrong.
+
+**How it works now:** clicking "Invite" on `/admin/waitlist` sends that
+person a real email (Supabase's built-in invite email — separate from a
+general marketing-email service, still don't have one of those) with a
+magic link. Clicking it creates their account and logs them straight in —
+no signup form, no password prompt, nothing to type. Their username gets
+auto-generated from their waitlist name/email (they can change it later
+from their profile). They can still set a real password afterward from
+`/profile` if they want one for next time, but it's optional — the link
+alone gets them in.
+
+The old manual sign-up form still works too as a fallback (still checks
+`is_invited`), in case the email ever doesn't arrive — Supabase's free
+tier email sending is rate-limited, fine for your current scale but worth
+knowing about if you invite a big batch at once.
+
 ### Launch checklist
 Things to do before you actually flip the switch and open Forge to
 everyone:

@@ -26,9 +26,9 @@ export default async function AdminWaitlist() {
         </a>
       </div>
       <p className="mb-4 text-xs text-muted">
-        "Invite" lets that person sign up right now, even while pre-launch —
-        no email gets sent (Forge doesn't send outbound email yet), so let
-        them know yourself.
+        "Invite" emails that person a magic link (Supabase's built-in invite
+        email) — clicking it creates their account and logs them straight
+        in, no signup form or password needed to get started.
       </p>
 
       <div className="overflow-x-auto rounded-xl border border-line">
@@ -64,6 +64,8 @@ export default async function AdminWaitlist() {
                   ) : (
                     <form action={inviteFromWaitlist}>
                       <input type="hidden" name="id" value={w.id} />
+                      <input type="hidden" name="email" value={w.email} />
+                      <input type="hidden" name="name" value={w.name || ""} />
                       <button className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-fg transition hover:border-forge hover:text-forge">
                         Invite
                       </button>
