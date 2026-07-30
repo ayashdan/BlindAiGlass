@@ -1,18 +1,30 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { signOut } from "@/app/(auth)/actions";
 import { levelProgress, rankForLevel, MAX_LEVEL } from "@/lib/game/leveling";
 import { AVATARS, resolveAvatar } from "@/lib/game/avatars";
-import { updateAvatar, uploadAvatarPhoto, removeAvatarPhoto, prestige, equipCosmetic } from "./actions";
+import {
+  updateAvatar,
+  uploadAvatarPhoto,
+  removeAvatarPhoto,
+  prestige,
+  equipCosmetic,
+  changePassword,
+} from "./actions";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
 import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import ShareButton from "@/components/ShareButton";
 import type { Profile } from "@/lib/types";
 
-// Identity hub: pick an avatar, see your stat card, and show off unlocked
-// achievements as a trophy case.
-export default async function ProfilePage() {
+// Identity hub: pick an avatar, see your stat card, show off unlocked
+// achievements, manage your password, and sign out.
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: { error?: string; success?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
@@ -339,6 +351,54 @@ export default async function ProfilePage() {
             No achievements yet — log a workout to earn your first one.
           </p>
         )}
+      </section>
+
+      {/* Account */}
+      <section
+        className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
+        style={{ animationDelay: "0.2s" }}
+      >
+        <p className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Account</p>
+
+        {searchParams.error && (
+          <p className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            {searchParams.error}
+          </p>
+        )}
+        {searchParams.success && (
+          <p className="mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+            {searchParams.success}
+          </p>
+        )}
+
+        <form action={changePassword} className="space-y-2">
+          <label className="block text-xs font-semibold text-muted">Change password</label>
+          <input
+            type="password"
+            name="password"
+            required
+            minLength={6}
+            placeholder="New password"
+            className="w-full rounded-lg border border-line bg-bg px-4 py-2.5 text-sm outline-none focus:border-forge"
+          />
+          <input
+            type="password"
+            name="confirm"
+            required
+            minLength={6}
+            placeholder="Confirm new password"
+            className="w-full rounded-lg border border-line bg-bg px-4 py-2.5 text-sm outline-none focus:border-forge"
+          />
+          <button className="press w-full rounded-lg border border-line py-2.5 text-sm font-bold text-fg transition hover:border-forge/50">
+            Update password
+          </button>
+        </form>
+
+        <form action={signOut} className="mt-4 border-t border-line pt-4">
+          <button className="press w-full rounded-lg bg-red-600 py-2.5 text-sm font-bold text-white transition hover:bg-red-500">
+            Log out
+          </button>
+        </form>
       </section>
     </main>
   );

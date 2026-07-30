@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AVATARS } from "@/lib/game/avatars";
 import { MAX_LEVEL } from "@/lib/game/leveling";
@@ -142,4 +143,27 @@ export async function equipCosmetic(formData: FormData) {
   revalidatePath("/profile");
   revalidatePath("/dashboard");
   revalidatePath("/leaderboard");
+}
+
+// Sets a new password. Doesn't need the old one (you're already
+// authenticated) — there is no way to show your existing password, because
+// Forge never stores it in a readable form, only a one-way hash.
+export async function changePassword(formData: FormData) {
+  const password = String(formData.get("password") || "");
+  const confirm = String(formData.get("confirm") || "");
+
+  if (password.length < 6) {
+    redirect("/profile?error=" + encodeURIComponent("Password must be at least 6 characters."));
+  }
+  if (password !== confirm) {
+    redirect("/profile?error=" + encodeURIComponent("Passwords don't match."));
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    redirect("/profile?error=" + encodeURIComponent(error.message));
+  }
+
+  redirect("/profile?success=" + encodeURIComponent("Password updated."));
 }

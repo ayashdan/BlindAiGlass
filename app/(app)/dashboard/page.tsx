@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/app/(auth)/actions";
 import { levelProgress, rankForLevel } from "@/lib/game/leveling";
 import { isAdminEmail } from "@/lib/admin";
 import { ensureTodayQuests } from "@/lib/game/quests-server";
@@ -131,11 +130,6 @@ export default async function Dashboard() {
               Admin
             </Link>
           )}
-          <form action={signOut}>
-            <button className="rounded-lg border border-line px-3 py-2 text-sm text-fg transition hover:border-forge/50">
-              Log out
-            </button>
-          </form>
         </div>
       </header>
 
