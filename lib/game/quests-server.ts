@@ -1,6 +1,7 @@
 // Server-only: assigns today's quests the first time they're needed, and
 // checks/marks them complete after a workout is logged.
 import { createClient } from "@/lib/supabase/server";
+import { localDateStr } from "@/lib/local-day";
 import {
   QUEST_TEMPLATES,
   pickDailyQuestKeys,
@@ -25,7 +26,7 @@ export type DailyQuestView = {
 export type CompletedQuest = { key: string; title: string; icon: string; xpReward: number };
 
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateStr();
 }
 
 // Makes sure today's quest rows exist for the current user (creating them

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { localDateStr } from "@/lib/local-day";
 
 const RECOVERY_BONUS_PCT = 10;
 
@@ -16,7 +17,7 @@ export async function logRestDay() {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
 
   const { data: prof } = await supabase
     .from("profiles")

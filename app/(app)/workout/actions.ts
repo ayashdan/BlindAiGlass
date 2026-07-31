@@ -10,6 +10,7 @@ import { checkAndCompleteQuests } from "@/lib/game/quests-server";
 import { checkAndRecordPRs } from "@/lib/game/records-server";
 import { checkAndAwardSeasonTiers } from "@/lib/game/season-server";
 import { VALID_MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
+import { localDateStr, addDaysToDateStr, localMidnightUtcIsoForToday } from "@/lib/local-day";
 import {
   computeStatGains,
   deriveClass,
@@ -105,14 +106,14 @@ export async function logWorkout(input: {
     discipline: prof?.stat_discipline ?? 0,
   };
 
-  // ---- Streak logic (UTC dates) ----
+  // ---- Streak logic (the user's own local dates, not the server's UTC
+  // clock — see lib/local-day.ts) ----
   // Worked out today already -> streak unchanged. Worked out yesterday -> +1.
   // Missed exactly one day but have a banked freeze -> the freeze protects
   // the streak (counts as if unbroken). Otherwise the streak resets to 1.
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const yesterdayStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
-  const twoDaysAgoStr = new Date(now.getTime() - 2 * 86400000).toISOString().slice(0, 10);
+  const todayStr = localDateStr();
+  const yesterdayStr = addDaysToDateStr(todayStr, -1);
+  const twoDaysAgoStr = addDaysToDateStr(todayStr, -2);
 
   const advancedToday = lastDate !== todayStr;
   let newStreak: number;
@@ -143,7 +144,7 @@ export async function logWorkout(input: {
   const newTrained = Array.from(trainedSet);
 
   // ---- Check today's quests against today's workouts (including this one) ----
-  const todayStart = `${todayStr}T00:00:00.000Z`;
+  const todayStart = localMidnightUtcIsoForToday(todayStr);
   const { data: todaysWorkouts } = await supabase
     .from("workouts")
     .select("muscle_groups, duration_minutes, difficulty")

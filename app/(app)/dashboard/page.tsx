@@ -6,7 +6,7 @@ import { isAdminEmail } from "@/lib/admin";
 import { ensureTodayQuests, ensureScheduledQuest } from "@/lib/game/quests-server";
 import { completeQuest, chooseSplit } from "@/app/(app)/quests/actions";
 import { scheduledQuestLabel } from "@/lib/game/quests";
-import { localDayKey } from "@/lib/local-day";
+import { localDayKey, localDateStr } from "@/lib/local-day";
 import { logRestDay } from "@/app/(app)/recovery/actions";
 import { dailyMotivation } from "@/lib/game/motivation";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
@@ -49,7 +49,7 @@ export default async function Dashboard() {
 
   const progress = levelProgress(profile.xp);
   const rank = rankForLevel(progress.level);
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
   const motivation = dailyMotivation(`${user.id}:${todayStr}`);
 
   // If today's a scheduled training day (from the recurring weekly plan on
