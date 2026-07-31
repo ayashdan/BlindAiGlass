@@ -164,6 +164,16 @@ body {
   box-shadow: 0 12px 32px -16px rgb(0 0 0 / 0.5);
 }
 
+@keyframes chest-shake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  15%      { transform: rotate(-6deg) scale(1.03); }
+  30%      { transform: rotate(6deg) scale(1.03); }
+  45%      { transform: rotate(-8deg) scale(1.05); }
+  60%      { transform: rotate(8deg) scale(1.05); }
+  75%      { transform: rotate(-4deg) scale(1.03); }
+}
+.chest-shake { animation: chest-shake 0.65s ease-in-out; }
+
 @keyframes count-tick {
   0%   { transform: translateY(4px); opacity: 0.4; }
   100% { transform: translateY(0); opacity: 1; }
@@ -203,6 +213,7 @@ body {
   .glow-pulse,
   .flame-flicker,
   .count-tick,
+  .chest-shake,
   .shop-ring::before {
     animation: none !important;
   }

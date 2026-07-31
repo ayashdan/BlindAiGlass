@@ -8,6 +8,7 @@ import { logWorkout } from "@/app/(app)/workout/actions";
 import AchievementCelebration from "./AchievementCelebration";
 import { MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
 import { CLASS_INFO, type CharacterClass } from "@/lib/game/stats";
+import { CHEST_DEFS } from "@/lib/game/chests";
 import ShareButton from "@/components/ShareButton";
 import type { WorkoutResult } from "@/lib/types";
 
@@ -223,6 +224,20 @@ export default function WorkoutForm({
                 </div>
               ))}
             </div>
+          )}
+
+          {result.chestsEarned.length > 0 && (
+            <Link
+              href="/chests"
+              className="celebrate-pop mt-4 flex items-center justify-between rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 transition hover:border-amber-500/60"
+            >
+              <p className="font-bold text-amber-300">
+                {result.chestsEarned
+                  .map((c) => `${CHEST_DEFS[c.tier].icon} ${c.count > 1 ? `${c.count}× ` : ""}${CHEST_DEFS[c.tier].name}`)
+                  .join(" + ")}
+              </p>
+              <span className="text-sm text-amber-300">Open →</span>
+            </Link>
           )}
 
           {/* Share options — pick what to brag about */}

@@ -25,6 +25,36 @@ export type ShopCategory = {
 
 export const SHOP_CATEGORIES: ShopCategory[] = [
   {
+    key: "chests",
+    title: "Chests",
+    blurb:
+      "Common and Rare also drop free from playing — buying just skips the wait. Legendary is shop-only.",
+    accent: "amber",
+    items: [
+      {
+        key: "chest_common",
+        name: "Common Chest",
+        description: "10-25 XP. Same one that drops from logging a workout.",
+        icon: "📦",
+        priceCents: 99,
+      },
+      {
+        key: "chest_rare",
+        name: "Rare Chest",
+        description: "40-80 XP, 25% chance of a bonus streak freeze.",
+        icon: "💎",
+        priceCents: 199,
+      },
+      {
+        key: "chest_legendary",
+        name: "Legendary Chest",
+        description: "150-300 XP, always includes a streak freeze. Not earnable any other way.",
+        icon: "👑",
+        priceCents: 499,
+      },
+    ],
+  },
+  {
     key: "borders",
     title: "Avatar Borders",
     blurb: "Exclusive animated rings — permanent, cosmetic only, never affects gameplay.",

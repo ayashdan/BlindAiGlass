@@ -9,6 +9,7 @@ import { checkAndAwardAchievements } from "@/lib/game/achievements-server";
 import { checkAndCompleteQuests } from "@/lib/game/quests-server";
 import { checkAndRecordPRs } from "@/lib/game/records-server";
 import { checkAndAwardSeasonTiers } from "@/lib/game/season-server";
+import { awardChest } from "@/lib/game/chests-server";
 import { VALID_MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
 import { localDateStr, addDaysToDateStr, localMidnightUtcIsoForToday } from "@/lib/local-day";
 import {
@@ -90,8 +91,10 @@ export async function logWorkout(input: {
   // Season-tier progress only depends on the workout row just inserted
   // above (a count of this season's workouts) — nothing computed below.
   // Kick it off now so its round trips overlap with everything else
-  // instead of stacking on top at the end.
+  // instead of stacking on top at the end. Every logged workout also
+  // drops a Common Chest — same reasoning, independent of everything else.
   const seasonPromise = checkAndAwardSeasonTiers(userId);
+  const commonChestPromise = awardChest(userId, "common", 1);
 
   const prevWorkouts = prof?.total_workouts ?? 0;
   const prevStreak = prof?.current_streak ?? 0;
@@ -233,9 +236,20 @@ export async function logWorkout(input: {
     rankChanged = rankChanged || xp2.rankChanged;
   }
 
+  // ---- Rare Chest for every 5-level milestone this workout crossed (rare
+  // if a big XP grant jumps more than one 5-level band at once) ----
+  const milestonesCrossed = Math.floor(level / 5) - Math.floor(xp1.fromLevel / 5);
+  const chestsEarned: { tier: "common" | "rare"; count: number }[] = [{ tier: "common", count: 1 }];
+  if (milestonesCrossed > 0) {
+    await awardChest(userId, "rare", milestonesCrossed);
+    chestsEarned.push({ tier: "rare", count: milestonesCrossed });
+  }
+  await commonChestPromise;
+
   revalidatePath("/dashboard");
   revalidatePath("/achievements");
   revalidatePath("/profile");
+  revalidatePath("/chests");
   return {
     ok: true,
     xpEarned: xpEarned + streakBonus + bonusXp,
@@ -254,5 +268,6 @@ export async function logWorkout(input: {
     newClass,
     seasonTiersReached: season.reached,
     recoveryBonusApplied,
+    chestsEarned,
   };
 }

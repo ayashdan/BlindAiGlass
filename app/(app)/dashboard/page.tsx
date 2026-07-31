@@ -112,6 +112,8 @@ export default async function Dashboard() {
 
   const canLogRest = profile.last_workout_date !== todayStr && profile.last_rest_date !== todayStr;
   const splitChosenToday = profile.split_choice_date === todayStr ? profile.split_choice : null;
+  const totalChests =
+    (profile.chests_common ?? 0) + (profile.chests_rare ?? 0) + (profile.chests_legendary ?? 0);
   const SPLIT_LABELS: Record<string, string> = {
     push_day: "💪 Push Day",
     pull_day: "🏋️ Pull Day",
@@ -341,15 +343,33 @@ export default async function Dashboard() {
         </Link>
       </div>
 
-      {/* Shop */}
-      <Link
-        href="/shop"
-        className="fade-in-up game-card mt-3 flex items-center justify-between rounded-2xl border border-fuchsia-500/30 bg-gradient-to-r from-fuchsia-500/10 via-surface to-surface px-5 py-4 transition hover:border-fuchsia-500/60"
-        style={{ animationDelay: "0.17s" }}
-      >
-        <span className="font-bold">🛒 Shop</span>
-        <span className="text-xs text-muted">Borders · Boosts · Custom missions →</span>
-      </Link>
+      {/* Chests + Shop */}
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <Link
+          href="/chests"
+          className={
+            "fade-in-up game-card relative flex flex-col items-center justify-center rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface px-4 py-4 text-center transition hover:border-amber-500/60" +
+            (totalChests > 0 ? " glow-pulse" : "")
+          }
+          style={{ animationDelay: "0.17s" }}
+        >
+          {totalChests > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-forge px-1.5 text-xs font-black text-neutral-950">
+              {totalChests}
+            </span>
+          )}
+          <span className="text-2xl">📦</span>
+          <span className="mt-1 font-bold">Chests</span>
+        </Link>
+        <Link
+          href="/shop"
+          className="fade-in-up game-card flex flex-col items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/10 via-surface to-surface px-4 py-4 text-center transition hover:border-fuchsia-500/60"
+          style={{ animationDelay: "0.18s" }}
+        >
+          <span className="text-2xl">🛒</span>
+          <span className="mt-1 font-bold">Shop</span>
+        </Link>
+      </div>
 
       {/* Choose today's split */}
       <section

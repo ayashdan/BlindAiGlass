@@ -31,6 +31,9 @@ export type Profile = {
   // groups scheduled that day, or "rest". Missing = not scheduled.
   weekly_split_schedule: Record<string, string[] | "rest">;
   tier: "free" | "premium";
+  chests_common: number;
+  chests_rare: number;
+  chests_legendary: number;
 };
 
 // An achievement the user just unlocked.
@@ -84,4 +87,5 @@ export type WorkoutResult =
       newClass: string | null; // set only when the workout changed your class
       seasonTiersReached: SeasonTierReached[];
       recoveryBonusApplied: boolean;
+      chestsEarned: { tier: "common" | "rare"; count: number }[];
     };
