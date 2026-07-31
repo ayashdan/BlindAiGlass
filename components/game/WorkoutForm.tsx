@@ -24,8 +24,14 @@ const DIFFICULTIES = [
   { key: "hard", label: "Hard" },
 ];
 
-export default function WorkoutForm() {
-  const [muscleGroups, setMuscleGroups] = useState<string[]>([]);
+export default function WorkoutForm({
+  suggestedGroups,
+  isScheduledRest,
+}: {
+  suggestedGroups?: string[] | null;
+  isScheduledRest?: boolean;
+} = {}) {
+  const [muscleGroups, setMuscleGroups] = useState<string[]>(suggestedGroups ?? []);
   const [customName, setCustomName] = useState("");
   const [duration, setDuration] = useState("");
   const [difficulty, setDifficulty] = useState("medium");
@@ -83,7 +89,7 @@ export default function WorkoutForm() {
     setDuration("");
     setNotes("");
     setCustomName("");
-    setMuscleGroups([]);
+    setMuscleGroups(suggestedGroups ?? []);
   }
 
   // ---- Reward screen ----
@@ -267,12 +273,28 @@ export default function WorkoutForm() {
         </p>
       )}
 
+      {isScheduledRest && (
+        <p className="rounded-lg border border-sky-500/30 bg-sky-500/5 px-4 py-3 text-sm text-sky-300">
+          😴 Today's scheduled as a rest day on your weekly plan. Logging a
+          workout anyway is fine — or head back and tap "Log a rest day" on
+          the dashboard instead.
+        </p>
+      )}
+
       {/* Muscle groups (multi-select) */}
       <div>
         <label className="mb-2 block text-sm font-semibold text-fg">
           Muscle groups worked
         </label>
-        <p className="mb-2 text-xs text-muted">Tap all that apply.</p>
+        <p className="mb-2 text-xs text-muted">
+          Tap all that apply.
+          {suggestedGroups && suggestedGroups.length > 0 && (
+            <span className="text-forge">
+              {" "}
+              📅 Suggested from your schedule — pre-selected below.
+            </span>
+          )}
+        </p>
         <div className="grid grid-cols-3 gap-2">
           {MUSCLE_GROUPS.map((g) => {
             const active = muscleGroups.includes(g.key);

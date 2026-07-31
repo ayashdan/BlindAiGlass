@@ -1,7 +1,16 @@
 // Server-only: assigns today's quests the first time they're needed, and
 // checks/marks them complete after a workout is logged.
 import { createClient } from "@/lib/supabase/server";
-import { QUEST_TEMPLATES, pickDailyQuestKeys, type QuestStats } from "./quests";
+import {
+  QUEST_TEMPLATES,
+  pickDailyQuestKeys,
+  buildScheduledQuestKey,
+  parseScheduledQuestKey,
+  scheduledQuestLabel,
+  scheduledQuestCheck,
+  SCHEDULED_QUEST_XP,
+  type QuestStats,
+} from "./quests";
 
 export type DailyQuestView = {
   key: string;
@@ -58,6 +67,18 @@ export async function ensureTodayQuests(): Promise<DailyQuestView[]> {
 
   return rows
     .map((r: any) => {
+      const scheduledGroups = parseScheduledQuestKey(r.quest_key);
+      if (scheduledGroups) {
+        return {
+          key: r.quest_key,
+          title: `Train ${scheduledQuestLabel(scheduledGroups)}`,
+          description: "From your weekly training schedule.",
+          icon: "📅",
+          xpReward: r.xp_reward,
+          completed: r.completed,
+          kind: "workout" as const,
+        };
+      }
       const tmpl = QUEST_TEMPLATES.find((q) => q.key === r.quest_key);
       if (!tmpl) return null;
       return {
@@ -95,6 +116,25 @@ export async function checkAndCompleteQuests(
   const completed: CompletedQuest[] = [];
   for (const row of rows ?? []) {
     if (row.completed) continue;
+
+    const scheduledGroups = parseScheduledQuestKey(row.quest_key);
+    if (scheduledGroups) {
+      if (!scheduledQuestCheck(scheduledGroups)(stats)) continue;
+      const { error } = await supabase
+        .from("daily_quests")
+        .update({ completed: true, completed_at: new Date().toISOString() })
+        .eq("id", row.id);
+      if (!error) {
+        completed.push({
+          key: row.quest_key,
+          title: `Train ${scheduledQuestLabel(scheduledGroups)}`,
+          icon: "📅",
+          xpReward: row.xp_reward,
+        });
+      }
+      continue;
+    }
+
     const tmpl = QUEST_TEMPLATES.find((q) => q.key === row.quest_key);
     if (!tmpl || tmpl.kind !== "workout" || !tmpl.check(stats)) continue;
 
@@ -178,4 +218,28 @@ export async function chooseSplit(split: string): Promise<{ ok: boolean }> {
     );
 
   return { ok: true };
+}
+
+// Called automatically on dashboard load when today's weekly split schedule
+// has specific muscle groups set — guarantees a matching quest exists for
+// exactly those groups, same idempotent-upsert approach as chooseSplit
+// above but for an arbitrary (non-catalog) group combination.
+export async function ensureScheduledQuest(groups: string[]): Promise<void> {
+  if (groups.length === 0) return;
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const date = todayStr();
+  const key = buildScheduledQuestKey(groups);
+
+  await supabase
+    .from("daily_quests")
+    .upsert(
+      { user_id: user.id, quest_date: date, quest_key: key, xp_reward: SCHEDULED_QUEST_XP },
+      { onConflict: "user_id,quest_date,quest_key" }
+    );
 }

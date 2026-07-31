@@ -11,14 +11,13 @@ import {
   prestige,
   equipCosmetic,
   changePassword,
-  setWeeklySplitSchedule,
 } from "./actions";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
-import { WEEKLY_SPLIT_DISPLAY_ORDER, WEEKLY_SPLIT_DAY_LABELS } from "@/lib/game/quests";
 import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import ShareButton from "@/components/ShareButton";
 import SubmitButton from "@/components/SubmitButton";
+import WeeklySplitEditor from "@/components/WeeklySplitEditor";
 import type { Profile } from "@/lib/types";
 
 // Identity hub: pick an avatar, see your stat card, show off unlocked
@@ -375,36 +374,12 @@ export default async function ProfilePage({
           Weekly training split
         </p>
         <p className="mb-3 text-xs text-muted">
-          Set what you're training each day — it repeats every week and locks
-          in a matching quest automatically, no more picking it each day.
-          Leave a day as "Not set" to keep choosing it manually.
+          Set what you're training each day — it repeats every week until you
+          change it, locks in a matching quest automatically, and gets
+          suggested when you log a workout. Leave a day blank to keep
+          choosing it manually.
         </p>
-        <form action={setWeeklySplitSchedule} className="space-y-2">
-          {WEEKLY_SPLIT_DISPLAY_ORDER.map((day) => (
-            <div key={day} className="flex items-center justify-between gap-3">
-              <label htmlFor={`split-${day}`} className="text-sm font-semibold">
-                {WEEKLY_SPLIT_DAY_LABELS[day]}
-              </label>
-              <select
-                id={`split-${day}`}
-                name={day}
-                defaultValue={profile.weekly_split_schedule?.[day] ?? ""}
-                className="rounded-lg border border-line bg-bg px-3 py-1.5 text-sm outline-none focus:border-forge"
-              >
-                <option value="">Not set</option>
-                <option value="push_day">💪 Push Day</option>
-                <option value="pull_day">🏋️ Pull Day</option>
-                <option value="leg_day">🦵 Leg Day</option>
-              </select>
-            </div>
-          ))}
-          <SubmitButton
-            pendingText="Saving…"
-            className="press mt-2 w-full rounded-lg border border-line py-2.5 text-sm font-bold text-fg transition hover:border-forge/50"
-          >
-            Save weekly plan
-          </SubmitButton>
-        </form>
+        <WeeklySplitEditor initial={profile.weekly_split_schedule ?? {}} />
       </section>
 
       {/* Account */}

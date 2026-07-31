@@ -4,6 +4,8 @@
 // replacing how QUEST_TEMPLATES/pickDailyQuestKeys are produced — everything
 // downstream (checking completion, awarding XP) stays the same.
 
+import { MUSCLE_GROUPS } from "./muscle-groups";
+
 export type QuestStats = {
   workoutsToday: number;
   muscleGroupsToday: string[]; // muscle groups trained today (e.g. "chest", "quads")
@@ -148,6 +150,34 @@ export type WeeklySplitDayKey = (typeof WEEKLY_SPLIT_DISPLAY_ORDER)[number];
 // split for the day (see chooseSplit in app/(app)/quests/actions.ts), so
 // they're always accurate to what's actually being trained, never random.
 export const RANDOM_POOL = QUEST_TEMPLATES.filter((q) => q.group !== "split");
+
+// A quest generated from the weekly split schedule (see WeeklySplitEditor /
+// setWeeklySplitSchedule) targets whatever specific muscle groups that day
+// is scheduled for, which varies per user/day — too open-ended to live in
+// the static QUEST_TEMPLATES catalog. Instead the exact groups are encoded
+// right into the quest_key so no extra DB column is needed; these helpers
+// build/parse that key and derive its title/check function on the fly.
+const SCHEDULED_QUEST_PREFIX = "sched:";
+export const SCHEDULED_QUEST_XP = 25;
+
+export function buildScheduledQuestKey(groups: string[]): string {
+  return SCHEDULED_QUEST_PREFIX + groups.slice().sort().join(",");
+}
+
+export function parseScheduledQuestKey(key: string): string[] | null {
+  if (!key.startsWith(SCHEDULED_QUEST_PREFIX)) return null;
+  return key.slice(SCHEDULED_QUEST_PREFIX.length).split(",").filter(Boolean);
+}
+
+export function scheduledQuestLabel(groups: string[]): string {
+  return groups
+    .map((g) => MUSCLE_GROUPS.find((m) => m.key === g)?.label ?? g)
+    .join(" + ");
+}
+
+export function scheduledQuestCheck(groups: string[]): (s: QuestStats) => boolean {
+  return (s) => groups.some((g) => s.muscleGroupsToday.includes(g));
+}
 
 // Picks QUESTS_PER_DAY template keys, seeded so the same (user, date) pair
 // always gets the same set — no reshuffling if this runs more than once

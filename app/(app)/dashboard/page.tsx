@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { levelProgress, rankForLevel } from "@/lib/game/leveling";
 import { isAdminEmail } from "@/lib/admin";
-import { ensureTodayQuests, chooseSplit as applyScheduledSplit } from "@/lib/game/quests-server";
+import { ensureTodayQuests, ensureScheduledQuest } from "@/lib/game/quests-server";
 import { completeQuest, chooseSplit } from "@/app/(app)/quests/actions";
-import { SUNDAY_FIRST_DAY_KEYS } from "@/lib/game/quests";
+import { SUNDAY_FIRST_DAY_KEYS, scheduledQuestLabel } from "@/lib/game/quests";
 import { logRestDay } from "@/app/(app)/recovery/actions";
 import { dailyMotivation } from "@/lib/game/motivation";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
@@ -51,17 +51,15 @@ export default async function Dashboard() {
   const todayStr = new Date().toISOString().slice(0, 10);
   const motivation = dailyMotivation(`${user.id}:${todayStr}`);
 
-  // If today hasn't had a split chosen yet, and the user has a recurring
-  // weekly plan set for today's day of the week, lock that in automatically
-  // instead of asking — same effect as tapping the button themselves.
-  if (profile.split_choice_date !== todayStr) {
-    const todayKey = SUNDAY_FIRST_DAY_KEYS[new Date().getDay()];
-    const scheduled = profile.weekly_split_schedule?.[todayKey];
-    if (scheduled) {
-      await applyScheduledSplit(scheduled);
-      profile.split_choice_date = todayStr;
-      profile.split_choice = scheduled;
-    }
+  // If today's a scheduled training day (from the recurring weekly plan on
+  // the profile page), lock in a matching quest automatically instead of
+  // asking — a scheduled rest day just skips the question, no auto quest.
+  const todayDayKey = SUNDAY_FIRST_DAY_KEYS[new Date().getDay()];
+  const todaysSchedule = profile.weekly_split_schedule?.[todayDayKey];
+  const scheduledGroups = Array.isArray(todaysSchedule) ? todaysSchedule : null;
+  const scheduledRestToday = todaysSchedule === "rest";
+  if (scheduledGroups && scheduledGroups.length > 0) {
+    await ensureScheduledQuest(scheduledGroups);
   }
 
   // Independent of each other and of the profile fetch above — run together
@@ -360,7 +358,21 @@ export default async function Dashboard() {
         className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
         style={{ animationDelay: "0.19s" }}
       >
-        {splitChosenToday ? (
+        {scheduledGroups && scheduledGroups.length > 0 ? (
+          <p className="text-sm">
+            <span className="font-black uppercase tracking-wide text-muted">
+              Today (scheduled):{" "}
+            </span>
+            <span className="font-bold">📅 {scheduledQuestLabel(scheduledGroups)}</span>
+          </p>
+        ) : scheduledRestToday ? (
+          <p className="text-sm">
+            <span className="font-black uppercase tracking-wide text-muted">
+              Today (scheduled):{" "}
+            </span>
+            <span className="font-bold">😴 Rest Day</span>
+          </p>
+        ) : splitChosenToday ? (
           <p className="text-sm">
             <span className="font-black uppercase tracking-wide text-muted">Today: </span>
             <span className="font-bold">{SPLIT_LABELS[splitChosenToday] ?? splitChosenToday}</span>
@@ -381,7 +393,8 @@ export default async function Dashboard() {
               ))}
             </div>
             <p className="mt-2 text-xs text-muted">
-              Locks in a matching quest instead of a random one.
+              Locks in a matching quest instead of a random one. Set a
+              recurring plan from your profile to skip this every day.
             </p>
           </>
         )}

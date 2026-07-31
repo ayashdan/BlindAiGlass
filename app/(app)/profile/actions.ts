@@ -7,8 +7,7 @@ import { AVATARS } from "@/lib/game/avatars";
 import { MAX_LEVEL } from "@/lib/game/leveling";
 import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
 import { WEEKLY_SPLIT_DISPLAY_ORDER } from "@/lib/game/quests";
-
-const SPLIT_KEYS = new Set(["push_day", "pull_day", "leg_day"]);
+import { VALID_MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
 
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024; // 3MB
 
@@ -148,23 +147,29 @@ export async function equipCosmetic(formData: FormData) {
   revalidatePath("/leaderboard");
 }
 
-// Saves what to train on each day of the week. It stays in effect every
-// week until manually changed here — the dashboard uses it to lock in
-// today's Push/Pull/Leg Day quest automatically instead of asking.
-export async function setWeeklySplitSchedule(formData: FormData) {
+// Saves what to train on each day of the week (specific muscle groups, or
+// "rest"). It stays in effect every week until manually changed here — the
+// dashboard uses it to lock in a matching quest automatically each day
+// instead of asking, and the workout log page suggests it when logging.
+export async function setWeeklySplitSchedule(schedule: Record<string, string[] | "rest">) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  const schedule: Record<string, string> = {};
+  const clean: Record<string, string[] | "rest"> = {};
   for (const day of WEEKLY_SPLIT_DISPLAY_ORDER) {
-    const value = String(formData.get(day) || "");
-    if (SPLIT_KEYS.has(value)) schedule[day] = value;
+    const value = schedule[day];
+    if (value === "rest") {
+      clean[day] = "rest";
+    } else if (Array.isArray(value)) {
+      const groups = value.filter((g) => VALID_MUSCLE_GROUPS.includes(g));
+      if (groups.length > 0) clean[day] = groups;
+    }
   }
 
-  await supabase.from("profiles").update({ weekly_split_schedule: schedule }).eq("id", user.id);
+  await supabase.from("profiles").update({ weekly_split_schedule: clean }).eq("id", user.id);
 
   revalidatePath("/profile");
   revalidatePath("/dashboard");

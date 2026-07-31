@@ -27,7 +27,9 @@ export type Profile = {
   recovery_bonus_pct: number;
   split_choice_date: string | null;
   split_choice: string | null;
-  weekly_split_schedule: Record<string, string>;
+  // Per day-of-week (see WEEKLY_SPLIT_DISPLAY_ORDER): either the muscle
+  // groups scheduled that day, or "rest". Missing = not scheduled.
+  weekly_split_schedule: Record<string, string[] | "rest">;
   tier: "free" | "premium";
 };
 
