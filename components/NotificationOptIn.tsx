@@ -46,10 +46,11 @@ export default function NotificationOptIn() {
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     });
     const json = sub.toJSON() as any;
-    await subscribeToPush({
-      endpoint: json.endpoint,
-      keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
-    });
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    await subscribeToPush(
+      { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } },
+      timezone
+    );
     setStatus("subscribed");
   }
 

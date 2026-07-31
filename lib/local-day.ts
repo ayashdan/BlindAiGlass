@@ -7,13 +7,10 @@
 import { headers } from "next/headers";
 import { type WeeklySplitDayKey } from "@/lib/game/quests";
 
-// The user's real local calendar date (YYYY-MM-DD) — this is the one and
-// only source of "today" for anything gameplay-related (daily quests,
-// streaks, rest days, the weekly split schedule). Everything else in this
-// file derives from this exact string so they can never disagree with each
-// other the way quest_date and the schedule lookup used to.
-export function localDateStr(): string {
-  const tz = headers().get("x-vercel-ip-timezone");
+// The calendar date (YYYY-MM-DD) in an arbitrary IANA timezone — the pure
+// version, for contexts with no incoming request to read a header from
+// (e.g. the cron job, which uses each user's own *stored* timezone instead).
+export function dateStrInTimezone(tz: string | null): string {
   if (!tz) return new Date().toISOString().slice(0, 10);
   try {
     // en-CA formats as YYYY-MM-DD, exactly what we want.
@@ -21,6 +18,15 @@ export function localDateStr(): string {
   } catch {
     return new Date().toISOString().slice(0, 10);
   }
+}
+
+// The visitor's real local calendar date (YYYY-MM-DD) — this is the one and
+// only source of "today" for anything gameplay-related (daily quests,
+// streaks, rest days, the weekly split schedule). Everything else in this
+// file derives from this exact string so they can never disagree with each
+// other the way quest_date and the schedule lookup used to.
+export function localDateStr(): string {
+  return dateStrInTimezone(headers().get("x-vercel-ip-timezone"));
 }
 
 // Pure calendar-date arithmetic on a YYYY-MM-DD string (e.g. -1 for

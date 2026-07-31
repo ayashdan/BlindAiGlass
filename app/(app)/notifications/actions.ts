@@ -7,7 +7,11 @@ type PushSubscriptionInput = {
   keys: { p256dh: string; auth: string };
 };
 
-export async function subscribeToPush(subscription: PushSubscriptionInput) {
+// `timezone` is the browser's own IANA zone (Intl.DateTimeFormat().resolvedOptions().timeZone)
+// — the cron job that sends reminders has no request/visitor to read a
+// timezone from, so this is the only way it can know what "today" means
+// for this specific person.
+export async function subscribeToPush(subscription: PushSubscriptionInput, timezone?: string) {
   const supabase = createClient();
   const {
     data: { user },
@@ -23,6 +27,11 @@ export async function subscribeToPush(subscription: PushSubscriptionInput) {
     },
     { onConflict: "endpoint" }
   );
+
+  if (timezone) {
+    await supabase.from("profiles").update({ timezone }).eq("id", user.id);
+  }
+
   return { ok: !error };
 }
 
