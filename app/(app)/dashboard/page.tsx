@@ -17,6 +17,7 @@ import AvatarDisplay from "@/components/AvatarDisplay";
 import NotificationOptIn from "@/components/NotificationOptIn";
 import InstallPrompt from "@/components/InstallPrompt";
 import SubmitButton from "@/components/SubmitButton";
+import AnimatedNumber from "@/components/AnimatedNumber";
 import type { Profile } from "@/lib/types";
 
 // The logged-in home hub. Shows your character build, level/XP/rank,
@@ -161,23 +162,30 @@ export default async function Dashboard() {
       </p>
 
       {/* Level + XP card */}
-      <section className="fade-in-up rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6">
+      <section className="fade-in-up game-card glow-pulse relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6">
         <div className="mb-3 flex items-baseline justify-between">
-          <span className="text-lg font-bold">Level {progress.level}</span>
+          <span className="text-lg font-bold">
+            Level <AnimatedNumber value={progress.level} className="text-2xl font-black text-amber-300" />
+          </span>
           <span className="rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
             {rank}
           </span>
         </div>
-        <div className="h-3 w-full overflow-hidden rounded-full bg-surface2">
+        <div className="xp-bar h-3 w-full rounded-full bg-surface2">
           <div
             className="h-full rounded-full bg-gradient-to-r from-forge to-amber-400 transition-all duration-700 ease-out"
             style={{ width: `${progress.percent}%` }}
           />
         </div>
         <p className="mt-2 text-sm text-muted">
-          {progress.atMax
-            ? "Max level reached!"
-            : `${progress.into} / ${progress.need} XP · ${progress.remaining} to next level`}
+          {progress.atMax ? (
+            "Max level reached!"
+          ) : (
+            <>
+              <AnimatedNumber value={progress.into} className="font-semibold text-fg" /> /{" "}
+              {progress.need} XP · {progress.remaining} to next level
+            </>
+          )}
         </p>
         <div className="mt-3">
           <ShareButton
@@ -189,7 +197,7 @@ export default async function Dashboard() {
 
       {/* Character build */}
       <section
-        className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
+        className="fade-in-up game-card mt-4 rounded-2xl border border-line bg-surface p-5"
         style={{ animationDelay: "0.03s" }}
       >
         <div className="mb-3 flex items-center justify-between">
@@ -245,10 +253,10 @@ export default async function Dashboard() {
       {/* Main action */}
       <Link
         href="/workout"
-        className="press fade-in-up mt-4 block rounded-2xl bg-gradient-to-r from-forge to-rose-500 py-5 text-center text-lg font-black text-neutral-950 shadow-lg shadow-forge/20 transition hover:from-forge-soft hover:to-rose-400"
+        className="press fade-in-up glow-pulse mt-4 block rounded-2xl bg-gradient-to-r from-forge to-rose-500 py-5 text-center text-lg font-black text-neutral-950 shadow-lg shadow-forge/20 transition hover:from-forge-soft hover:to-rose-400"
         style={{ animationDelay: "0.08s" }}
       >
-        + Log a workout
+        ⚔️ Log a workout
       </Link>
 
       {canLogRest && (
@@ -272,9 +280,9 @@ export default async function Dashboard() {
         className="fade-in-up mt-4 grid grid-cols-3 gap-3"
         style={{ animationDelay: "0.1s" }}
       >
-        <Stat label="Streak" value={`${profile.current_streak}🔥`} accent="sky" />
-        <Stat label="Best" value={`${profile.longest_streak}`} accent="violet" />
-        <Stat label="Workouts" value={`${profile.total_workouts}`} accent="emerald" />
+        <Stat label="Streak" value={profile.current_streak} icon="🔥" flicker accent="sky" />
+        <Stat label="Best" value={profile.longest_streak} accent="violet" />
+        <Stat label="Workouts" value={profile.total_workouts} accent="emerald" />
       </section>
       {profile.streak_freezes > 0 && (
         <p className="mt-2 text-center text-xs text-sky-300/80">
@@ -286,7 +294,7 @@ export default async function Dashboard() {
       {/* Season pass */}
       {season && (
         <section
-          className="fade-in-up mt-4 rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-5"
+          className="fade-in-up game-card mt-4 rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-5"
           style={{ animationDelay: "0.13s" }}
         >
           <div className="mb-3 flex items-center justify-between">
@@ -313,50 +321,29 @@ export default async function Dashboard() {
         </section>
       )}
 
-      {/* Achievements */}
-      <Link
-        href="/achievements"
-        className="fade-in-up mt-4 flex items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/5 px-5 py-4 transition hover:border-amber-500/60"
-        style={{ animationDelay: "0.15s" }}
-      >
-        <span className="font-bold">🏅 Achievements</span>
-        <span className="text-muted">View →</span>
-      </Link>
-
-      {/* Leaderboard + friends + history + profile */}
+      {/* Achievements + history — Leaderboard/Friends/Profile live in the
+          bottom tab bar now, no need to repeat them here. */}
       <div
         className="fade-in-up mt-4 grid grid-cols-2 gap-3"
-        style={{ animationDelay: "0.18s" }}
+        style={{ animationDelay: "0.15s" }}
       >
         <Link
-          href="/leaderboard"
-          className="flex flex-col items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/5 px-2 py-4 text-center transition hover:border-rose-500/60"
+          href="/achievements"
+          className="game-card flex items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/5 px-4 py-4 transition hover:border-amber-500/60"
         >
-          <span className="text-sm font-bold">🏆 Leaderboard</span>
-        </Link>
-        <Link
-          href="/friends"
-          className="flex flex-col items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 px-2 py-4 text-center transition hover:border-fuchsia-500/60"
-        >
-          <span className="text-sm font-bold">🤝 Friends</span>
+          <span className="font-bold">🏅 Achievements</span>
         </Link>
         <Link
           href="/history"
-          className="flex flex-col items-center justify-center rounded-2xl border border-sky-500/30 bg-sky-500/5 px-2 py-4 text-center transition hover:border-sky-500/60"
+          className="game-card flex items-center justify-between rounded-2xl border border-sky-500/30 bg-sky-500/5 px-4 py-4 transition hover:border-sky-500/60"
         >
-          <span className="text-sm font-bold">📜 History</span>
-        </Link>
-        <Link
-          href="/profile"
-          className="flex flex-col items-center justify-center rounded-2xl border border-violet-500/30 bg-violet-500/5 px-2 py-4 text-center transition hover:border-violet-500/60"
-        >
-          <span className="text-sm font-bold">👤 Profile</span>
+          <span className="font-bold">📜 History</span>
         </Link>
       </div>
 
       {/* Choose today's split */}
       <section
-        className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
+        className="fade-in-up game-card mt-4 rounded-2xl border border-line bg-surface p-5"
         style={{ animationDelay: "0.19s" }}
       >
         {scheduledGroups && scheduledGroups.length > 0 ? (
@@ -404,7 +391,7 @@ export default async function Dashboard() {
       {/* Today's quests */}
       {quests.length > 0 && (
         <section
-          className="fade-in-up mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5"
+          className="fade-in-up game-card mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5"
           style={{ animationDelay: "0.2s" }}
         >
           <p className="mb-3 text-sm font-black uppercase tracking-wide text-emerald-400">
@@ -463,15 +450,24 @@ const ACCENTS = {
 function Stat({
   label,
   value,
+  icon,
+  flicker,
   accent,
 }: {
   label: string;
-  value: string;
+  value: number;
+  icon?: string;
+  flicker?: boolean;
   accent?: keyof typeof ACCENTS;
 }) {
   return (
-    <div className={`rounded-xl border p-4 text-center ${accent ? ACCENTS[accent] : "border-line bg-surface"}`}>
-      <div className="text-xl font-black">{value}</div>
+    <div
+      className={`game-card rounded-xl border p-4 text-center ${accent ? ACCENTS[accent] : "border-line bg-surface"}`}
+    >
+      <div className="text-xl font-black">
+        <AnimatedNumber value={value} />
+        {icon && <span className={flicker ? "flame-flicker ml-0.5" : "ml-0.5"}>{icon}</span>}
+      </div>
       <div className="mt-1 text-xs uppercase tracking-wide text-muted">
         {label}
       </div>

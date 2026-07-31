@@ -83,7 +83,7 @@ export default async function ProfilePage({
       </Link>
 
       {/* Identity card */}
-      <section className="fade-in-up mt-3 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6 text-center">
+      <section className="fade-in-up glow-pulse mt-3 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6 text-center">
         <div className="flex justify-center">
           <AvatarDisplay
             avatarUrl={profile.avatar_url}
@@ -112,7 +112,7 @@ export default async function ProfilePage({
         <p className="mt-2 text-sm text-muted">
           {classInfo.icon} <span className="font-bold">{charClass}</span> — {classInfo.blurb}
         </p>
-        <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-surface2">
+        <div className="xp-bar mt-4 h-3 w-full rounded-full bg-surface2">
           <div
             className="h-full rounded-full bg-gradient-to-r from-forge to-amber-400 transition-all duration-700 ease-out"
             style={{ width: `${progress.percent}%` }}

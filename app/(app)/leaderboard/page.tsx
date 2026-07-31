@@ -92,16 +92,23 @@ export default async function LeaderboardPage({
       <div className="space-y-2">
         {list.map((u, i) => {
           const mineRow = u.id === user.id;
+          const podium = i < 3;
           return (
             <div
               key={u.id}
               className={
-                "fade-in-up flex items-center gap-3 rounded-xl border p-3 " +
-                (mineRow ? "border-forge/50 bg-forge/10" : "border-line bg-surface")
+                "fade-in-up game-card flex items-center gap-3 rounded-xl border p-3 " +
+                (mineRow
+                  ? "border-forge/50 bg-forge/10"
+                  : podium
+                    ? "border-amber-500/30 bg-amber-500/5"
+                    : "border-line bg-surface")
               }
               style={{ animationDelay: `${Math.min(i, 10) * 0.03}s` }}
             >
-              <span className="w-8 text-center font-black text-muted">{medal(i)}</span>
+              <span className={"w-8 text-center font-black " + (podium ? "flame-flicker text-xl" : "text-muted")}>
+                {medal(i)}
+              </span>
               <AvatarDisplay
                 avatarUrl={u.avatar_url}
                 avatar={u.avatar}

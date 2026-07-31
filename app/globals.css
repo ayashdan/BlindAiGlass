@@ -80,14 +80,114 @@ body {
   animation: confetti-fall linear infinite;
 }
 
+/* ---- Game-feel pass: ambient depth, shimmer, glow ---- */
+
+/* A slow-breathing forge-orange glow behind the whole app instead of a flat
+   black void. Fixed + pointer-events:none so it never interferes with
+   scrolling or taps — purely atmosphere. */
+@keyframes ambient-drift {
+  0%, 100% { transform: translate(-6%, -4%) scale(1); opacity: 0.55; }
+  50%      { transform: translate(4%, 6%) scale(1.15); opacity: 0.85; }
+}
+.ambient-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.ambient-glow::before,
+.ambient-glow::after {
+  content: "";
+  position: absolute;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  background: radial-gradient(circle, rgb(255 106 26 / 0.16), transparent 70%);
+  animation: ambient-drift 16s ease-in-out infinite;
+}
+.ambient-glow::before { top: -20%; left: -15%; }
+.ambient-glow::after {
+  bottom: -25%;
+  right: -15%;
+  background: radial-gradient(circle, rgb(217 119 6 / 0.13), transparent 70%);
+  animation-delay: -8s;
+  animation-duration: 20s;
+}
+.light .ambient-glow::before,
+.light .ambient-glow::after { opacity: 0.5; }
+
+/* A moving highlight sweeping across XP/progress bars so they read as
+   "charging" rather than a static rectangle. */
+@keyframes bar-shimmer {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(220%); }
+}
+.xp-bar {
+  position: relative;
+  overflow: hidden;
+}
+.xp-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: bar-shimmer 2.6s ease-in-out infinite;
+}
+
+/* A soft breathing glow for the "hero" card on the dashboard — reads as
+   the character's current status, not just a static panel. */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(255, 106, 26, 0); }
+  50%      { box-shadow: 0 0 42px -6px rgb(255 106 26 / 0.35); }
+}
+.glow-pulse { animation: glow-pulse 3.4s ease-in-out infinite; }
+
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25%      { transform: scale(1.08) rotate(-4deg); }
+  50%      { transform: scale(0.96) rotate(3deg); }
+  75%      { transform: scale(1.05) rotate(-2deg); }
+}
+.flame-flicker { display: inline-block; animation: flame-flicker 1.8s ease-in-out infinite; }
+
+/* Cards lift and pick up a rim of light on hover/focus — makes the whole
+   app feel responsive to touch, not just the buttons. */
+.game-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.game-card:hover,
+.game-card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -16px rgb(0 0 0 / 0.5);
+}
+
+@keyframes count-tick {
+  0%   { transform: translateY(4px); opacity: 0.4; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.count-tick { animation: count-tick 0.25s ease-out; }
+
 @media (prefers-reduced-motion: reduce) {
   .fade-in-up,
   .celebrate-pop,
   .celebrate-bounce,
-  .confetti-piece {
+  .confetti-piece,
+  .ambient-glow::before,
+  .ambient-glow::after,
+  .xp-bar::after,
+  .glow-pulse,
+  .flame-flicker,
+  .count-tick {
     animation: none !important;
   }
   .press:active {
+    transform: none;
+  }
+  .game-card:hover,
+  .game-card:focus-within {
     transform: none;
   }
 }
