@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPushToUser } from "@/lib/push-server";
@@ -47,9 +48,24 @@ export async function startNewSeason() {
 // cron or faking a streak.
 export async function sendTestNotification() {
   const user = await requireAdmin();
-  await sendPushToUser(user.id, {
+  const result = await sendPushToUser(user.id, {
     title: "🔥 Forge test",
     body: "If you can see this, push notifications are working!",
     url: "/dashboard",
   });
+
+  let message: string;
+  if (!result.configured) {
+    message =
+      "VAPID keys aren't set in this environment (NEXT_PUBLIC_VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY) — the server can't send anything until those are added in Vercel and redeployed.";
+  } else if (result.subscriptionCount === 0) {
+    message =
+      "No push subscription found for your account. Tap 🔔 on the dashboard — if nothing prompts you for permission, the public VAPID key isn't reaching the browser, or (on iOS) Forge isn't added to your Home Screen yet.";
+  } else if (result.successCount === 0) {
+    message = `Found ${result.subscriptionCount} subscription(s), but every send failed: ${result.errors.join("; ")}`;
+  } else {
+    message = `Sent to ${result.successCount}/${result.subscriptionCount} device(s). If it still didn't show up, check that device's OS-level notification permission for this app/browser.`;
+  }
+
+  redirect("/admin/settings?notify=" + encodeURIComponent(message));
 }

@@ -5,7 +5,11 @@ import SubmitButton from "@/components/SubmitButton";
 // The one switch that matters pre-launch: flips public sign-up on/off.
 // While off, app/(auth)/actions.ts blocks everyone but the admin from
 // creating an account, and the marketing page only offers the waitlist.
-export default async function AdminSettings() {
+export default async function AdminSettings({
+  searchParams,
+}: {
+  searchParams: { notify?: string };
+}) {
   const admin = createAdminClient();
   const { data } = await admin
     .from("app_settings")
@@ -81,6 +85,11 @@ export default async function AdminSettings() {
             🔔 Send me a test notification
           </SubmitButton>
         </form>
+        {searchParams?.notify && (
+          <p className="mt-4 rounded-lg border border-sky-500/30 bg-sky-500/5 px-4 py-3 text-sm text-sky-300">
+            {searchParams.notify}
+          </p>
+        )}
       </div>
     </div>
   );
