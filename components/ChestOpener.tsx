@@ -1,11 +1,12 @@
 "use client";
 
-// The tap-and-reveal moment for a chest: a shake for anticipation, then a
-// pop-in reveal of exactly what it gave you. Rewards are always disclosed
-// ranges (see lib/game/chests.ts) — this is presentation, not a gamble.
+// The tap-and-reveal moment for a chest: a shake for anticipation, the lid
+// pops open, then the reward shows. Rewards are always disclosed ranges
+// (see lib/game/chests.ts) — this is presentation, not a gamble.
 import { useState, useTransition } from "react";
 import { CHEST_DEFS, type ChestTier } from "@/lib/game/chests";
 import { openChestAction } from "@/app/(app)/chests/actions";
+import ChestGraphic from "./ChestGraphic";
 
 const COLOR_CLASSES: Record<string, { border: string; bg: string; text: string; glow: string }> = {
   emerald: { border: "border-emerald-500/40", bg: "bg-emerald-500/5", text: "text-emerald-400", glow: "" },
@@ -24,6 +25,7 @@ export default function ChestOpener({
   const colors = COLOR_CLASSES[def.color] ?? COLOR_CLASSES.emerald;
   const [count, setCount] = useState(initialCount);
   const [shaking, setShaking] = useState(false);
+  const [lidOpen, setLidOpen] = useState(false);
   const [reveal, setReveal] = useState<{ xp: number; freeze: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -32,14 +34,16 @@ export default function ChestOpener({
     if (count <= 0 || pending || shaking) return;
     setError(null);
     setReveal(null);
+    setLidOpen(false);
     setShaking(true);
 
     startTransition(async () => {
       const result = await openChestAction(tier);
-      // Let the shake play out before showing what's inside.
+      // Let the shake play out before the lid pops open.
       setTimeout(() => {
         setShaking(false);
         if (result.ok) {
+          setLidOpen(true);
           setCount((c) => Math.max(0, c - 1));
           setReveal({ xp: result.reward.xp, freeze: result.reward.freeze });
         } else {
@@ -50,9 +54,13 @@ export default function ChestOpener({
   }
 
   return (
-    <div className={`game-card rounded-2xl border ${colors.border} ${colors.bg} p-5 text-center ${count > 0 ? colors.glow : ""}`}>
-      <div className={`text-5xl ${shaking ? "chest-shake" : ""}`}>{def.icon}</div>
-      <p className="mt-2 font-black">{def.name}</p>
+    <div
+      className={`game-card rounded-2xl border ${colors.border} ${colors.bg} p-5 text-center ${count > 0 && !lidOpen ? colors.glow : ""}`}
+    >
+      <div className={`mx-auto w-28 ${shaking ? "chest-shake" : ""}`}>
+        <ChestGraphic tier={tier} open={lidOpen} />
+      </div>
+      <p className="mt-1 font-black">{def.name}</p>
       <p className="mt-1 text-xs text-muted">{def.blurb}</p>
 
       <p className={`mt-3 text-2xl font-black ${colors.text}`}>×{count}</p>
