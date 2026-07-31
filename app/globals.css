@@ -170,6 +170,28 @@ body {
 }
 .count-tick { animation: count-tick 0.25s ease-out; }
 
+/* ---- Shop-exclusive border previews: rotating gradient rings, distinct
+   from the plain solid-color borders achievements unlock for free. ---- */
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+.shop-ring {
+  position: relative;
+  border-radius: 50%;
+  padding: 3px;
+}
+.shop-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: ring-spin 3s linear infinite;
+}
+.shop-ring-inferno::before { background: conic-gradient(from 0deg, #ff6a1a, #fbbf24, #fb7185, #ff6a1a); }
+.shop-ring-frost::before { background: conic-gradient(from 0deg, #38bdf8, #e0f2fe, #0ea5e9, #38bdf8); }
+.shop-ring-gold::before { background: conic-gradient(from 0deg, #fbbf24, #fef3c7, #d97706, #fbbf24); }
+.shop-ring-void::before { background: conic-gradient(from 0deg, #7c3aed, #0a0a0a, #a78bfa, #7c3aed); }
+
 @media (prefers-reduced-motion: reduce) {
   .fade-in-up,
   .celebrate-pop,
@@ -180,7 +202,8 @@ body {
   .xp-bar::after,
   .glow-pulse,
   .flame-flicker,
-  .count-tick {
+  .count-tick,
+  .shop-ring::before {
     animation: none !important;
   }
   .press:active {

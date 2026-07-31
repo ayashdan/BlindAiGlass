@@ -341,6 +341,16 @@ export default async function Dashboard() {
         </Link>
       </div>
 
+      {/* Shop */}
+      <Link
+        href="/shop"
+        className="fade-in-up game-card mt-3 flex items-center justify-between rounded-2xl border border-fuchsia-500/30 bg-gradient-to-r from-fuchsia-500/10 via-surface to-surface px-5 py-4 transition hover:border-fuchsia-500/60"
+        style={{ animationDelay: "0.17s" }}
+      >
+        <span className="font-bold">🛒 Shop</span>
+        <span className="text-xs text-muted">Borders · Boosts · Custom missions →</span>
+      </Link>
+
       {/* Choose today's split */}
       <section
         className="fade-in-up game-card mt-4 rounded-2xl border border-line bg-surface p-5"
