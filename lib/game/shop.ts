@@ -118,15 +118,22 @@ export const SHOP_CATEGORIES: ShopCategory[] = [
   {
     key: "utility",
     title: "Streak Protection",
-    blurb: "Freezes are also earned for free every 7-day streak — this just adds more.",
+    blurb: "Freezes are also earned for free every 7-day streak — these are shortcuts, not requirements.",
     accent: "cyan",
     items: [
       {
         key: "freeze_pack_2",
         name: "2× Streak Freeze",
-        description: "Adds 2 streak freezes to your bank, up to the usual cap.",
+        description: "Adds 2 streak freezes to your bank, up to the usual cap. Protects a future missed day.",
         icon: "🧊",
         priceCents: 199,
+      },
+      {
+        key: "streak_restore",
+        name: "Streak Restore",
+        description: "Already broke your streak? Brings it back to what it was before the miss — one-time, retroactive.",
+        icon: "⏪",
+        priceCents: 499,
       },
     ],
   },
