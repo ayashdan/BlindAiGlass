@@ -12,21 +12,19 @@ function labelFor(category: string): string {
   return MUSCLE_GROUPS.find((g) => g.key === category)?.label ?? category;
 }
 
+// Takes the caller's already-verified user id — see applyXp for why.
 export async function checkAndRecordPRs(
+  userId: string,
   muscleGroups: string[],
   durationMinutes: number
 ): Promise<{ newRecords: NewRecord[] }> {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { newRecords: [] };
 
   const categories = Array.from(new Set(["overall", ...muscleGroups]));
   const { data: existing } = await supabase
     .from("personal_records")
     .select("category, best_minutes")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .in("category", categories);
 
   const bestByCategory = new Map(
@@ -39,7 +37,7 @@ export async function checkAndRecordPRs(
     if (prevBest === undefined) {
       // First time logging this category — set the baseline quietly.
       await supabase.from("personal_records").insert({
-        user_id: user.id,
+        user_id: userId,
         category,
         best_minutes: durationMinutes,
       });
@@ -47,7 +45,7 @@ export async function checkAndRecordPRs(
       await supabase
         .from("personal_records")
         .update({ best_minutes: durationMinutes, achieved_at: new Date().toISOString() })
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("category", category);
       newRecords.push({ category, label: labelFor(category), value: durationMinutes });
     }

@@ -30,29 +30,26 @@ function todayStr(): string {
 
 // Makes sure today's quest rows exist for the current user (creating them
 // the first time they're needed that day), then returns them for display.
-export async function ensureTodayQuests(): Promise<DailyQuestView[]> {
+// Takes the caller's already-verified user id — see applyXp for why.
+export async function ensureTodayQuests(userId: string): Promise<DailyQuestView[]> {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
 
   const date = todayStr();
 
   const { data: existing } = await supabase
     .from("daily_quests")
     .select("quest_key, completed, xp_reward")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("quest_date", date);
 
   let rows = existing ?? [];
   if (rows.length === 0) {
-    const keys = pickDailyQuestKeys(`${user.id}:${date}`);
+    const keys = pickDailyQuestKeys(`${userId}:${date}`);
     const inserts = keys
       .map((key) => QUEST_TEMPLATES.find((q) => q.key === key))
       .filter((t): t is NonNullable<typeof t> => Boolean(t))
       .map((t) => ({
-        user_id: user.id,
+        user_id: userId,
         quest_date: date,
         quest_key: t.key,
         xp_reward: t.xpReward,
@@ -96,21 +93,19 @@ export async function ensureTodayQuests(): Promise<DailyQuestView[]> {
 
 // Call right after logging a workout. Checks today's not-yet-completed
 // quests against today's workout stats, marks newly finished ones, and
-// reports the bonus XP to award.
+// reports the bonus XP to award. Takes the caller's already-verified user
+// id — see applyXp for why.
 export async function checkAndCompleteQuests(
+  userId: string,
   stats: QuestStats
 ): Promise<{ completed: CompletedQuest[]; xpAwarded: number }> {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { completed: [], xpAwarded: 0 };
 
   const date = todayStr();
   const { data: rows } = await supabase
     .from("daily_quests")
     .select("id, quest_key, completed, xp_reward")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("quest_date", date);
 
   const completed: CompletedQuest[] = [];
@@ -153,14 +148,12 @@ export async function checkAndCompleteQuests(
 
 // Marks a "manual" (self-reported) quest complete when the user taps its
 // "Mark done" button — there's no workout data to verify these against.
+// Takes the caller's already-verified user id — see applyXp for why.
 export async function completeManualQuest(
+  userId: string,
   key: string
 ): Promise<{ quest: CompletedQuest | null; xpAwarded: number }> {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { quest: null, xpAwarded: 0 };
 
   const tmpl = QUEST_TEMPLATES.find((q) => q.key === key && q.kind === "manual");
   if (!tmpl) return { quest: null, xpAwarded: 0 };
@@ -169,7 +162,7 @@ export async function completeManualQuest(
   const { data: row } = await supabase
     .from("daily_quests")
     .select("id, completed, xp_reward")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("quest_date", date)
     .eq("quest_key", key)
     .maybeSingle();
@@ -189,13 +182,10 @@ export async function completeManualQuest(
 
 // Records which split the user is training today and guarantees a matching
 // Push/Pull/Leg Day quest exists for today — never a randomly-assigned,
-// possibly-mismatched one.
-export async function chooseSplit(split: string): Promise<{ ok: boolean }> {
+// possibly-mismatched one. Takes the caller's already-verified user id —
+// see applyXp for why.
+export async function chooseSplit(userId: string, split: string): Promise<{ ok: boolean }> {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false };
 
   const tmpl = QUEST_TEMPLATES.find((q) => q.key === split && q.group === "split");
   if (!tmpl) return { ok: false };
@@ -205,7 +195,7 @@ export async function chooseSplit(split: string): Promise<{ ok: boolean }> {
   await supabase
     .from("profiles")
     .update({ split_choice_date: date, split_choice: split })
-    .eq("id", user.id);
+    .eq("id", userId);
 
   // Idempotent: adds today's matching split quest if it isn't already
   // there. Only sets the columns below, so it won't reset completion
@@ -213,7 +203,7 @@ export async function chooseSplit(split: string): Promise<{ ok: boolean }> {
   await supabase
     .from("daily_quests")
     .upsert(
-      { user_id: user.id, quest_date: date, quest_key: split, xp_reward: tmpl.xpReward },
+      { user_id: userId, quest_date: date, quest_key: split, xp_reward: tmpl.xpReward },
       { onConflict: "user_id,quest_date,quest_key" }
     );
 
@@ -223,15 +213,12 @@ export async function chooseSplit(split: string): Promise<{ ok: boolean }> {
 // Called automatically on dashboard load when today's weekly split schedule
 // has specific muscle groups set — guarantees a matching quest exists for
 // exactly those groups, same idempotent-upsert approach as chooseSplit
-// above but for an arbitrary (non-catalog) group combination.
-export async function ensureScheduledQuest(groups: string[]): Promise<void> {
+// above but for an arbitrary (non-catalog) group combination. Takes the
+// caller's already-verified user id — see applyXp for why.
+export async function ensureScheduledQuest(userId: string, groups: string[]): Promise<void> {
   if (groups.length === 0) return;
 
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
 
   const date = todayStr();
   const key = buildScheduledQuestKey(groups);
@@ -239,7 +226,7 @@ export async function ensureScheduledQuest(groups: string[]): Promise<void> {
   await supabase
     .from("daily_quests")
     .upsert(
-      { user_id: user.id, quest_date: date, quest_key: key, xp_reward: SCHEDULED_QUEST_XP },
+      { user_id: userId, quest_date: date, quest_key: key, xp_reward: SCHEDULED_QUEST_XP },
       { onConflict: "user_id,quest_date,quest_key" }
     );
 }

@@ -27,19 +27,19 @@ const FAIL: XpResult = {
   rankChanged: false,
 };
 
-export async function applyXp(amount: number): Promise<XpResult> {
+// Takes the caller's already-verified user id rather than re-checking
+// auth.getUser() itself — a single workout log can award XP several times
+// over (base, streak, quests, achievements, PRs, season tiers), and each of
+// those used to be its own separate network round trip to re-verify the
+// exact same identity the caller already confirmed once.
+export async function applyXp(userId: string, amount: number): Promise<XpResult> {
   const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return FAIL;
 
   // Read the current totals.
   const { data: profile, error: readErr } = await supabase
     .from("profiles")
     .select("xp, level, rank")
-    .eq("id", user.id)
+    .eq("id", userId)
     .single();
   if (readErr || !profile) return FAIL;
 
@@ -54,7 +54,7 @@ export async function applyXp(amount: number): Promise<XpResult> {
   const { error: writeErr } = await supabase
     .from("profiles")
     .update({ xp: totalXp, level, rank })
-    .eq("id", user.id);
+    .eq("id", userId);
   if (writeErr) return FAIL;
 
   return {

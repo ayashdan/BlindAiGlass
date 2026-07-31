@@ -4,22 +4,19 @@ import { createClient } from "@/lib/supabase/server";
 import { ACHIEVEMENT_CONDITIONS, type AchievementStats } from "./achievements";
 import type { UnlockedAchievement } from "@/lib/types";
 
+// Takes the caller's already-verified user id — see applyXp for why.
 export async function checkAndAwardAchievements(
+  userId: string,
   stats: AchievementStats
 ): Promise<{ unlocked: UnlockedAchievement[]; xpAwarded: number }> {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { unlocked: [], xpAwarded: 0 };
 
-  // The catalog of all achievements, and which ones this user already has.
-  const { data: catalog } = await supabase
-    .from("achievements")
-    .select("id, key, name, icon, xp_reward");
-  const { data: mine } = await supabase
-    .from("user_achievements")
-    .select("achievement_id");
+  // The catalog of all achievements, and which ones this user already has —
+  // independent queries, run together instead of one at a time.
+  const [{ data: catalog }, { data: mine }] = await Promise.all([
+    supabase.from("achievements").select("id, key, name, icon, xp_reward"),
+    supabase.from("user_achievements").select("achievement_id"),
+  ]);
 
   const have = new Set((mine ?? []).map((r: any) => r.achievement_id));
   const byKey = new Map((catalog ?? []).map((a: any) => [a.key as string, a]));
@@ -31,7 +28,7 @@ export async function checkAndAwardAchievements(
     if (cond.check(stats)) {
       const { error } = await supabase
         .from("user_achievements")
-        .insert({ user_id: user.id, achievement_id: cat.id });
+        .insert({ user_id: userId, achievement_id: cat.id });
       if (!error) {
         unlocked.push({
           key: cat.key,

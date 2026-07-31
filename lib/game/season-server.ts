@@ -19,16 +19,13 @@ async function getSeasonConfig(supabase: ReturnType<typeof createClient>) {
 
 // Call after logging a workout: checks whether this workout crossed any
 // new season tier, records it (so it's never double-paid), and reports the
-// bonus XP to award.
-export async function checkAndAwardSeasonTiers(): Promise<{
+// bonus XP to award. Takes the caller's already-verified user id — see
+// applyXp for why.
+export async function checkAndAwardSeasonTiers(userId: string): Promise<{
   reached: SeasonTierReached[];
   xpAwarded: number;
 }> {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { reached: [], xpAwarded: 0 };
 
   const { seasonNumber, seasonStartedAt } = await getSeasonConfig(supabase);
 
@@ -36,12 +33,12 @@ export async function checkAndAwardSeasonTiers(): Promise<{
     supabase
       .from("workouts")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .gte("created_at", seasonStartedAt),
     supabase
       .from("season_pass_progress")
       .select("tier")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("season_number", seasonNumber),
   ]);
   const workoutsThisSeason = workoutsRes.count ?? 0;
@@ -52,7 +49,7 @@ export async function checkAndAwardSeasonTiers(): Promise<{
     if (claimedTiers.has(t.tier) || workoutsThisSeason < t.workouts) continue;
     const { error } = await supabase
       .from("season_pass_progress")
-      .insert({ user_id: user.id, season_number: seasonNumber, tier: t.tier });
+      .insert({ user_id: userId, season_number: seasonNumber, tier: t.tier });
     if (!error) reached.push({ tier: t.tier, xpReward: t.xpReward });
   }
 
@@ -66,13 +63,10 @@ export type SeasonStatus = {
   tiers: { tier: number; workouts: number; xpReward: number; done: boolean }[];
 };
 
-// Display-only status for the dashboard.
-export async function getSeasonStatus(): Promise<SeasonStatus | null> {
+// Display-only status for the dashboard. Takes the caller's already-verified
+// user id — see applyXp for why.
+export async function getSeasonStatus(userId: string): Promise<SeasonStatus | null> {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
 
   const { seasonNumber, seasonStartedAt } = await getSeasonConfig(supabase);
 
@@ -81,12 +75,12 @@ export async function getSeasonStatus(): Promise<SeasonStatus | null> {
     supabase
       .from("workouts")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .gte("created_at", seasonStartedAt),
     supabase
       .from("season_pass_progress")
       .select("tier")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("season_number", seasonNumber),
   ]);
   const workoutsThisSeason = workoutsRes.count ?? 0;

@@ -38,6 +38,7 @@ export async function logWorkout(input: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "You are not logged in." };
+  const userId = user.id;
 
   // ---- Validate the input ----
   const muscleGroups = Array.from(new Set(input.muscleGroups ?? [])).filter((g) =>
@@ -63,7 +64,7 @@ export async function logWorkout(input: {
     .select(
       "total_workouts, current_streak, longest_streak, last_workout_date, streak_freezes, trained_muscle_groups, stat_power, stat_grit, stat_endurance, stat_discipline, recovery_bonus_pct"
     )
-    .eq("id", user.id)
+    .eq("id", userId)
     .single();
   const prof = profData as any;
 
@@ -75,7 +76,7 @@ export async function logWorkout(input: {
 
   // ---- Save the workout ----
   const { error: insErr } = await supabase.from("workouts").insert({
-    user_id: user.id,
+    user_id: userId,
     muscle_groups: muscleGroups,
     custom_name: customName,
     duration_minutes: duration,
@@ -84,6 +85,12 @@ export async function logWorkout(input: {
     xp_earned: xpEarned,
   });
   if (insErr) return { ok: false, error: "Could not save the workout." };
+
+  // Season-tier progress only depends on the workout row just inserted
+  // above (a count of this season's workouts) — nothing computed below.
+  // Kick it off now so its round trips overlap with everything else
+  // instead of stacking on top at the end.
+  const seasonPromise = checkAndAwardSeasonTiers(userId);
 
   const prevWorkouts = prof?.total_workouts ?? 0;
   const prevStreak = prof?.current_streak ?? 0;
@@ -140,10 +147,10 @@ export async function logWorkout(input: {
   const { data: todaysWorkouts } = await supabase
     .from("workouts")
     .select("muscle_groups, duration_minutes, difficulty")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .gte("created_at", todayStart);
   const rows = todaysWorkouts ?? [];
-  const quest = await checkAndCompleteQuests({
+  const quest = await checkAndCompleteQuests(userId, {
     workoutsToday: rows.length,
     muscleGroupsToday: rows.flatMap((r: any) => (r.muscle_groups as string[]) ?? []),
     maxDurationToday: rows.reduce((m: number, r: any) => Math.max(m, r.duration_minutes ?? 0), 0),
@@ -187,20 +194,20 @@ export async function logWorkout(input: {
       stat_discipline: newStats.discipline,
       recovery_bonus_pct: 0, // consumed, whether or not it was active
     })
-    .eq("id", user.id);
+    .eq("id", userId);
 
   // ---- Bonus XP when the streak advances into a multiple of 7 days ----
   const streakBonus = advancedToday && newStreak > 0 && newStreak % 7 === 0 ? 50 : 0;
 
   // ---- Award workout XP (+ streak bonus), recalculating level + rank ----
-  const xp1 = await applyXp(xpEarned + streakBonus);
+  const xp1 = await applyXp(userId, xpEarned + streakBonus);
 
   // ---- Check for a new personal record (longest workout, overall + per muscle group) ----
-  const pr = await checkAndRecordPRs(muscleGroups, duration);
+  const pr = await checkAndRecordPRs(userId, muscleGroups, duration);
   const prXp = pr.newRecords.length * XP_PER_NEW_PR;
 
   // ---- Check achievements against the fresh stats ----
-  const ach = await checkAndAwardAchievements({
+  const ach = await checkAndAwardAchievements(userId, {
     totalWorkouts: newWorkouts,
     currentStreak: newStreak,
     level: xp1.level,
@@ -208,8 +215,8 @@ export async function logWorkout(input: {
     muscleGroupVariety: newTrained.length,
   });
 
-  // ---- Check season pass tiers ----
-  const season = await checkAndAwardSeasonTiers();
+  // ---- Season pass tiers (kicked off right after the workout insert above) ----
+  const season = await seasonPromise;
 
   // ---- Award any achievement/quest/PR/season bonus XP (can trigger another level-up) ----
   let level = xp1.level;
@@ -218,7 +225,7 @@ export async function logWorkout(input: {
   let rankChanged = xp1.rankChanged;
   const bonusXp = ach.xpAwarded + quest.xpAwarded + prXp + season.xpAwarded;
   if (bonusXp > 0) {
-    const xp2 = await applyXp(bonusXp);
+    const xp2 = await applyXp(userId, bonusXp);
     level = xp2.level;
     rank = xp2.rank;
     leveledUp = leveledUp || xp2.leveledUp;

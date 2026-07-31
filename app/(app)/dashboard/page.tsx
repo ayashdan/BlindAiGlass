@@ -60,14 +60,14 @@ export default async function Dashboard() {
   const scheduledGroups = Array.isArray(todaysSchedule) ? todaysSchedule : null;
   const scheduledRestToday = todaysSchedule === "rest";
   if (scheduledGroups && scheduledGroups.length > 0) {
-    await ensureScheduledQuest(scheduledGroups);
+    await ensureScheduledQuest(user.id, scheduledGroups);
   }
 
   // Independent of each other and of the profile fetch above — run together
   // instead of one-at-a-time round trips.
   const [quests, season, friendRowsRes] = await Promise.all([
-    ensureTodayQuests(),
-    getSeasonStatus(),
+    ensureTodayQuests(user.id),
+    getSeasonStatus(user.id),
     supabase
       .from("friendships")
       .select("user_id, friend_id")
