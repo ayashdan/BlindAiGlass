@@ -5,7 +5,8 @@ import { levelProgress, rankForLevel } from "@/lib/game/leveling";
 import { isAdminEmail } from "@/lib/admin";
 import { ensureTodayQuests, ensureScheduledQuest } from "@/lib/game/quests-server";
 import { completeQuest, chooseSplit } from "@/app/(app)/quests/actions";
-import { SUNDAY_FIRST_DAY_KEYS, scheduledQuestLabel } from "@/lib/game/quests";
+import { scheduledQuestLabel } from "@/lib/game/quests";
+import { localDayKey } from "@/lib/local-day";
 import { logRestDay } from "@/app/(app)/recovery/actions";
 import { dailyMotivation } from "@/lib/game/motivation";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
@@ -54,7 +55,7 @@ export default async function Dashboard() {
   // If today's a scheduled training day (from the recurring weekly plan on
   // the profile page), lock in a matching quest automatically instead of
   // asking — a scheduled rest day just skips the question, no auto quest.
-  const todayDayKey = SUNDAY_FIRST_DAY_KEYS[new Date().getDay()];
+  const todayDayKey = localDayKey();
   const todaysSchedule = profile.weekly_split_schedule?.[todayDayKey];
   const scheduledGroups = Array.isArray(todaysSchedule) ? todaysSchedule : null;
   const scheduledRestToday = todaysSchedule === "rest";

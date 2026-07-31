@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { SUNDAY_FIRST_DAY_KEYS } from "@/lib/game/quests";
+import { localDayKey } from "@/lib/local-day";
 import WorkoutForm from "@/components/game/WorkoutForm";
 
 export default async function WorkoutPage() {
@@ -17,7 +17,7 @@ export default async function WorkoutPage() {
     .eq("id", user.id)
     .single();
 
-  const todayKey = SUNDAY_FIRST_DAY_KEYS[new Date().getDay()];
+  const todayKey = localDayKey();
   const todaysSchedule = (profile?.weekly_split_schedule as Record<string, string[] | "rest"> | null)?.[
     todayKey
   ];
