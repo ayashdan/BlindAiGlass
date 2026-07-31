@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { setLaunched, startNewSeason, sendTestNotification } from "./actions";
+import SubmitButton from "@/components/SubmitButton";
 
 // The one switch that matters pre-launch: flips public sign-up on/off.
 // While off, app/(auth)/actions.ts blocks everyone but the admin from
@@ -34,7 +35,7 @@ export default async function AdminSettings() {
         </p>
         <form action={setLaunched}>
           <input type="hidden" name="launched" value={launched ? "false" : "true"} />
-          <button
+          <SubmitButton
             className={
               "rounded-lg px-4 py-2 font-bold transition " +
               (launched
@@ -43,7 +44,7 @@ export default async function AdminSettings() {
             }
           >
             {launched ? "Close sign-ups (back to waitlist-only)" : "🚀 Launch Forge"}
-          </button>
+          </SubmitButton>
         </form>
       </div>
 
@@ -57,9 +58,9 @@ export default async function AdminSettings() {
           resets the season-pass workout-count track on the dashboard.
         </p>
         <form action={startNewSeason}>
-          <button className="rounded-lg border border-line px-4 py-2 font-bold text-fg transition hover:border-forge/50">
+          <SubmitButton className="rounded-lg border border-line px-4 py-2 font-bold text-fg transition hover:border-forge/50">
             Start Season {parseInt(seasonNumber, 10) + 1}
-          </button>
+          </SubmitButton>
         </form>
       </div>
 
@@ -73,9 +74,12 @@ export default async function AdminSettings() {
           reaches devices where you've already tapped 🔔 on the dashboard).
         </p>
         <form action={sendTestNotification}>
-          <button className="rounded-lg border border-line px-4 py-2 font-bold text-fg transition hover:border-forge/50">
+          <SubmitButton
+            pendingText="Sending…"
+            className="rounded-lg border border-line px-4 py-2 font-bold text-fg transition hover:border-forge/50"
+          >
             🔔 Send me a test notification
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </div>

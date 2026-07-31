@@ -127,6 +127,22 @@ export const QUEST_TEMPLATES: QuestTemplate[] = [
 
 export const QUESTS_PER_DAY = 3;
 
+// Keys the weekly split schedule stores per day. SUNDAY_FIRST_DAY_KEYS is
+// indexed to match JS's Date.getDay() (0 = Sunday); DISPLAY_ORDER is just
+// how the profile page lists the days (Monday first).
+export const SUNDAY_FIRST_DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+export const WEEKLY_SPLIT_DISPLAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+export const WEEKLY_SPLIT_DAY_LABELS: Record<string, string> = {
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+  sun: "Sunday",
+};
+export type WeeklySplitDayKey = (typeof WEEKLY_SPLIT_DISPLAY_ORDER)[number];
+
 // "split" quests (Push/Pull/Leg Day) are never part of the random daily
 // draw — they only ever get added when the user explicitly chooses their
 // split for the day (see chooseSplit in app/(app)/quests/actions.ts), so

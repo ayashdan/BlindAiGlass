@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signUp } from "../actions";
+import SubmitButton from "@/components/SubmitButton";
 
 export default function SignupPage({
   searchParams,
@@ -41,12 +42,12 @@ export default function SignupPage({
           placeholder="Password (min 6 characters)"
           className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
         />
-        <button
-          type="submit"
+        <SubmitButton
+          pendingText="Creating account…"
           className="w-full rounded-lg bg-forge py-3 font-bold text-neutral-950 transition hover:bg-forge-soft"
         >
           Create account
-        </button>
+        </SubmitButton>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">

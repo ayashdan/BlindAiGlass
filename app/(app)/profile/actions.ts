@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { AVATARS } from "@/lib/game/avatars";
 import { MAX_LEVEL } from "@/lib/game/leveling";
 import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
+import { WEEKLY_SPLIT_DISPLAY_ORDER } from "@/lib/game/quests";
+
+const SPLIT_KEYS = new Set(["push_day", "pull_day", "leg_day"]);
 
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024; // 3MB
 
@@ -143,6 +146,28 @@ export async function equipCosmetic(formData: FormData) {
   revalidatePath("/profile");
   revalidatePath("/dashboard");
   revalidatePath("/leaderboard");
+}
+
+// Saves what to train on each day of the week. It stays in effect every
+// week until manually changed here — the dashboard uses it to lock in
+// today's Push/Pull/Leg Day quest automatically instead of asking.
+export async function setWeeklySplitSchedule(formData: FormData) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const schedule: Record<string, string> = {};
+  for (const day of WEEKLY_SPLIT_DISPLAY_ORDER) {
+    const value = String(formData.get(day) || "");
+    if (SPLIT_KEYS.has(value)) schedule[day] = value;
+  }
+
+  await supabase.from("profiles").update({ weekly_split_schedule: schedule }).eq("id", user.id);
+
+  revalidatePath("/profile");
+  revalidatePath("/dashboard");
 }
 
 // Sets a new password. Doesn't need the old one (you're already

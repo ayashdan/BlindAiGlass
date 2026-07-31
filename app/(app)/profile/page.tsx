@@ -11,11 +11,14 @@ import {
   prestige,
   equipCosmetic,
   changePassword,
+  setWeeklySplitSchedule,
 } from "./actions";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
+import { WEEKLY_SPLIT_DISPLAY_ORDER, WEEKLY_SPLIT_DAY_LABELS } from "@/lib/game/quests";
 import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import ShareButton from "@/components/ShareButton";
+import SubmitButton from "@/components/SubmitButton";
 import type { Profile } from "@/lib/types";
 
 // Identity hub: pick an avatar, see your stat card, show off unlocked
@@ -138,9 +141,9 @@ export default async function ProfilePage({
               permanent ⭐ star next to your name — your streaks, workouts, and
               achievements stay untouched.
             </p>
-            <button className="press rounded-lg bg-gradient-to-r from-amber-400 to-forge px-4 py-2 text-sm font-black text-neutral-950 transition hover:opacity-90">
+            <SubmitButton className="press rounded-lg bg-gradient-to-r from-amber-400 to-forge px-4 py-2 text-sm font-black text-neutral-950 transition hover:opacity-90">
               ⭐ Prestige
-            </button>
+            </SubmitButton>
           </form>
         )}
       </section>
@@ -157,9 +160,7 @@ export default async function ProfilePage({
           {AVATARS.map((a) => (
             <form key={a} action={updateAvatar}>
               <input type="hidden" name="avatar" value={a} />
-              <button
-                type="submit"
-                aria-pressed={!profile.avatar_url && avatar === a}
+              <SubmitButton
                 className={
                   "press flex h-12 w-full items-center justify-center rounded-lg border text-2xl transition " +
                   (!profile.avatar_url && avatar === a
@@ -168,7 +169,7 @@ export default async function ProfilePage({
                 }
               >
                 {a}
-              </button>
+              </SubmitButton>
             </form>
           ))}
         </div>
@@ -183,15 +184,18 @@ export default async function ProfilePage({
               required
               className="text-sm text-muted"
             />
-            <button className="press rounded-lg bg-forge px-3 py-1.5 text-sm font-bold text-neutral-950 transition hover:bg-forge-soft">
+            <SubmitButton
+              pendingText="Uploading…"
+              className="press rounded-lg bg-forge px-3 py-1.5 text-sm font-bold text-neutral-950 transition hover:bg-forge-soft"
+            >
               Upload
-            </button>
+            </SubmitButton>
           </form>
           {profile.avatar_url && (
             <form action={removeAvatarPhoto} className="mt-2">
-              <button className="text-xs text-muted underline transition hover:text-fg">
+              <SubmitButton className="text-xs text-muted underline transition hover:text-fg">
                 Remove photo, use emoji instead
-              </button>
+              </SubmitButton>
             </form>
           )}
         </div>
@@ -244,7 +248,7 @@ export default async function ProfilePage({
               <div className="flex flex-wrap gap-2">
                 <form action={equipCosmetic}>
                   <input type="hidden" name="title" value="" />
-                  <button
+                  <SubmitButton
                     className={
                       "press rounded-lg border px-3 py-1.5 text-xs font-bold transition " +
                       (!profile.equipped_title
@@ -253,14 +257,14 @@ export default async function ProfilePage({
                     }
                   >
                     None
-                  </button>
+                  </SubmitButton>
                 </form>
                 {unlockedCosmetics
                   .filter((c) => c.title)
                   .map((c) => (
                     <form key={c.key} action={equipCosmetic}>
                       <input type="hidden" name="title" value={c.title} />
-                      <button
+                      <SubmitButton
                         className={
                           "press rounded-lg border px-3 py-1.5 text-xs font-bold transition " +
                           (profile.equipped_title === c.title
@@ -269,7 +273,7 @@ export default async function ProfilePage({
                         }
                       >
                         {c.title}
-                      </button>
+                      </SubmitButton>
                     </form>
                   ))}
               </div>
@@ -282,25 +286,27 @@ export default async function ProfilePage({
               <div className="flex flex-wrap gap-2">
                 <form action={equipCosmetic}>
                   <input type="hidden" name="border" value="" />
-                  <button
+                  <SubmitButton
                     className={
                       "press h-9 w-9 rounded-full border-2 transition " +
                       (!profile.equipped_border ? "border-forge" : "border-line")
                     }
                   >
                     ✕
-                  </button>
+                  </SubmitButton>
                 </form>
                 {unlockedCosmetics
                   .filter((c) => c.border)
                   .map((c) => (
                     <form key={c.key} action={equipCosmetic}>
                       <input type="hidden" name="border" value={c.border} />
-                      <button
+                      <SubmitButton
                         className={`press h-9 w-9 rounded-full border-[3px] bg-surface2 ${c.border} ${
                           profile.equipped_border === c.border ? "ring-2 ring-forge" : ""
                         }`}
-                      />
+                      >
+                        {""}
+                      </SubmitButton>
                     </form>
                   ))}
               </div>
@@ -360,6 +366,47 @@ export default async function ProfilePage({
         )}
       </section>
 
+      {/* Weekly training split */}
+      <section
+        className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
+        style={{ animationDelay: "0.18s" }}
+      >
+        <p className="mb-1 text-sm font-black uppercase tracking-wide text-muted">
+          Weekly training split
+        </p>
+        <p className="mb-3 text-xs text-muted">
+          Set what you're training each day — it repeats every week and locks
+          in a matching quest automatically, no more picking it each day.
+          Leave a day as "Not set" to keep choosing it manually.
+        </p>
+        <form action={setWeeklySplitSchedule} className="space-y-2">
+          {WEEKLY_SPLIT_DISPLAY_ORDER.map((day) => (
+            <div key={day} className="flex items-center justify-between gap-3">
+              <label htmlFor={`split-${day}`} className="text-sm font-semibold">
+                {WEEKLY_SPLIT_DAY_LABELS[day]}
+              </label>
+              <select
+                id={`split-${day}`}
+                name={day}
+                defaultValue={profile.weekly_split_schedule?.[day] ?? ""}
+                className="rounded-lg border border-line bg-bg px-3 py-1.5 text-sm outline-none focus:border-forge"
+              >
+                <option value="">Not set</option>
+                <option value="push_day">💪 Push Day</option>
+                <option value="pull_day">🏋️ Pull Day</option>
+                <option value="leg_day">🦵 Leg Day</option>
+              </select>
+            </div>
+          ))}
+          <SubmitButton
+            pendingText="Saving…"
+            className="press mt-2 w-full rounded-lg border border-line py-2.5 text-sm font-bold text-fg transition hover:border-forge/50"
+          >
+            Save weekly plan
+          </SubmitButton>
+        </form>
+      </section>
+
       {/* Account */}
       <section
         className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
@@ -396,15 +443,21 @@ export default async function ProfilePage({
             placeholder="Confirm new password"
             className="w-full rounded-lg border border-line bg-bg px-4 py-2.5 text-sm outline-none focus:border-forge"
           />
-          <button className="press w-full rounded-lg border border-line py-2.5 text-sm font-bold text-fg transition hover:border-forge/50">
+          <SubmitButton
+            pendingText="Updating…"
+            className="press w-full rounded-lg border border-line py-2.5 text-sm font-bold text-fg transition hover:border-forge/50"
+          >
             Update password
-          </button>
+          </SubmitButton>
         </form>
 
         <form action={signOut} className="mt-4 border-t border-line pt-4">
-          <button className="press w-full rounded-lg bg-red-600 py-2.5 text-sm font-bold text-white transition hover:bg-red-500">
+          <SubmitButton
+            pendingText="Logging out…"
+            className="press w-full rounded-lg bg-red-600 py-2.5 text-sm font-bold text-white transition hover:bg-red-500"
+          >
             Log out
-          </button>
+          </SubmitButton>
         </form>
       </section>
     </main>

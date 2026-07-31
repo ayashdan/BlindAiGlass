@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteUser, setUserTier } from "./actions";
+import SubmitButton from "@/components/SubmitButton";
 
 // Search, view, and delete users. Uses the service-role client so it can see
 // everyone regardless of RLS.
@@ -59,7 +60,7 @@ export default async function AdminUsers({
               <form action={setUserTier}>
                 <input type="hidden" name="id" value={u.id} />
                 <input type="hidden" name="tier" value={u.tier === "premium" ? "free" : "premium"} />
-                <button
+                <SubmitButton
                   className={
                     "rounded-lg border px-3 py-1.5 text-sm font-semibold transition " +
                     (u.tier === "premium"
@@ -68,13 +69,16 @@ export default async function AdminUsers({
                   }
                 >
                   {u.tier === "premium" ? "Move to Free" : "Make Premium"}
-                </button>
+                </SubmitButton>
               </form>
               <form action={deleteUser}>
                 <input type="hidden" name="id" value={u.id} />
-                <button className="rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-300 transition hover:bg-red-500/10">
+                <SubmitButton
+                  pendingText="Deleting…"
+                  className="rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-300 transition hover:bg-red-500/10"
+                >
                   Delete
-                </button>
+                </SubmitButton>
               </form>
             </div>
           </div>

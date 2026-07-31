@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { joinWaitlist } from "./actions";
 import ThemeToggle from "@/components/ThemeToggle";
+import SubmitButton from "@/components/SubmitButton";
 
 // Public landing + waitlist signup. (A referral link "?ref=CODE" pre-fills the
 // hidden ref field so the inviter gets credit.)
@@ -73,12 +74,12 @@ export default function Home({
             placeholder="Email"
             className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
           />
-          <button
-            type="submit"
+          <SubmitButton
+            pendingText="Joining…"
             className="w-full rounded-lg bg-forge py-3 font-black text-neutral-950 transition hover:bg-forge-soft"
           >
             Join the Forge waitlist
-          </button>
+          </SubmitButton>
         </form>
 
         {ref && (

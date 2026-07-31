@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signIn } from "../actions";
+import SubmitButton from "@/components/SubmitButton";
 
 export default function LoginPage({
   searchParams,
@@ -34,12 +35,12 @@ export default function LoginPage({
           placeholder="Password"
           className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
         />
-        <button
-          type="submit"
+        <SubmitButton
+          pendingText="Logging in…"
           className="w-full rounded-lg bg-forge py-3 font-bold text-neutral-950 transition hover:bg-forge-soft"
         >
           Log in
-        </button>
+        </SubmitButton>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">

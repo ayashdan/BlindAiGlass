@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inviteFromWaitlist, uninviteFromWaitlist } from "./actions";
+import SubmitButton from "@/components/SubmitButton";
 
 // The waitlist table has RLS on with zero public policies, so the only way to
 // read the raw list (emails, referral counts) is through this service-role
@@ -66,18 +67,21 @@ export default async function AdminWaitlist({
                   {w.invited ? (
                     <form action={uninviteFromWaitlist}>
                       <input type="hidden" name="id" value={w.id} />
-                      <button className="rounded-lg border border-amber-500/40 px-3 py-1 text-xs font-semibold text-amber-400 transition hover:bg-amber-500/10">
+                      <SubmitButton className="rounded-lg border border-amber-500/40 px-3 py-1 text-xs font-semibold text-amber-400 transition hover:bg-amber-500/10">
                         ⭐ Invited — revoke
-                      </button>
+                      </SubmitButton>
                     </form>
                   ) : (
                     <form action={inviteFromWaitlist}>
                       <input type="hidden" name="id" value={w.id} />
                       <input type="hidden" name="email" value={w.email} />
                       <input type="hidden" name="name" value={w.name || ""} />
-                      <button className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-fg transition hover:border-forge hover:text-forge">
+                      <SubmitButton
+                        pendingText="Sending…"
+                        className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-fg transition hover:border-forge hover:text-forge"
+                      >
                         Invite
-                      </button>
+                      </SubmitButton>
                     </form>
                   )}
                 </td>

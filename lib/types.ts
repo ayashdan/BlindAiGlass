@@ -27,6 +27,7 @@ export type Profile = {
   recovery_bonus_pct: number;
   split_choice_date: string | null;
   split_choice: string | null;
+  weekly_split_schedule: Record<string, string>;
   tier: "free" | "premium";
 };
 

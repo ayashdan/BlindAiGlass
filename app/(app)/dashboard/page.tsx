@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { levelProgress, rankForLevel } from "@/lib/game/leveling";
 import { isAdminEmail } from "@/lib/admin";
-import { ensureTodayQuests } from "@/lib/game/quests-server";
+import { ensureTodayQuests, chooseSplit as applyScheduledSplit } from "@/lib/game/quests-server";
 import { completeQuest, chooseSplit } from "@/app/(app)/quests/actions";
+import { SUNDAY_FIRST_DAY_KEYS } from "@/lib/game/quests";
 import { logRestDay } from "@/app/(app)/recovery/actions";
 import { dailyMotivation } from "@/lib/game/motivation";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
@@ -14,6 +15,7 @@ import ShareButton from "@/components/ShareButton";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import NotificationOptIn from "@/components/NotificationOptIn";
 import InstallPrompt from "@/components/InstallPrompt";
+import SubmitButton from "@/components/SubmitButton";
 import type { Profile } from "@/lib/types";
 
 // The logged-in home hub. Shows your character build, level/XP/rank,
@@ -48,6 +50,19 @@ export default async function Dashboard() {
   const rank = rankForLevel(progress.level);
   const todayStr = new Date().toISOString().slice(0, 10);
   const motivation = dailyMotivation(`${user.id}:${todayStr}`);
+
+  // If today hasn't had a split chosen yet, and the user has a recurring
+  // weekly plan set for today's day of the week, lock that in automatically
+  // instead of asking — same effect as tapping the button themselves.
+  if (profile.split_choice_date !== todayStr) {
+    const todayKey = SUNDAY_FIRST_DAY_KEYS[new Date().getDay()];
+    const scheduled = profile.weekly_split_schedule?.[todayKey];
+    if (scheduled) {
+      await applyScheduledSplit(scheduled);
+      profile.split_choice_date = todayStr;
+      profile.split_choice = scheduled;
+    }
+  }
 
   // Independent of each other and of the profile fetch above — run together
   // instead of one-at-a-time round trips.
@@ -239,9 +254,12 @@ export default async function Dashboard() {
 
       {canLogRest && (
         <form action={logRestDay} className="fade-in-up mt-2" style={{ animationDelay: "0.09s" }}>
-          <button className="press w-full rounded-xl border border-sky-500/30 bg-sky-500/5 py-2 text-sm font-bold text-sky-400 transition hover:border-sky-500/60">
+          <SubmitButton
+            pendingText="Logging…"
+            className="press w-full rounded-xl border border-sky-500/30 bg-sky-500/5 py-2 text-sm font-bold text-sky-400 transition hover:border-sky-500/60"
+          >
             😴 Log a rest day (+10% XP on your next workout)
-          </button>
+          </SubmitButton>
         </form>
       )}
       {profile.recovery_bonus_pct > 0 && (
@@ -356,9 +374,9 @@ export default async function Dashboard() {
               {(["push_day", "pull_day", "leg_day"] as const).map((key) => (
                 <form key={key} action={chooseSplit}>
                   <input type="hidden" name="split" value={key} />
-                  <button className="press w-full rounded-lg border border-line bg-bg py-2.5 text-sm font-bold text-fg transition hover:border-forge/50">
+                  <SubmitButton className="press w-full rounded-lg border border-line bg-bg py-2.5 text-sm font-bold text-fg transition hover:border-forge/50">
                     {SPLIT_LABELS[key]}
-                  </button>
+                  </SubmitButton>
                 </form>
               ))}
             </div>
@@ -404,9 +422,9 @@ export default async function Dashboard() {
                 {q.kind === "manual" && !q.completed ? (
                   <form action={completeQuest}>
                     <input type="hidden" name="key" value={q.key} />
-                    <button className="press rounded-lg border border-forge/40 px-2 py-1 text-xs font-bold text-forge transition hover:bg-forge/10">
+                    <SubmitButton className="press rounded-lg border border-forge/40 px-2 py-1 text-xs font-bold text-forge transition hover:bg-forge/10">
                       Mark done
-                    </button>
+                    </SubmitButton>
                   </form>
                 ) : (
                   <span className="text-xs font-semibold text-forge">+{q.xpReward} XP</span>

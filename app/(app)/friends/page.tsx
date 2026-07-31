@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import SubmitButton from "@/components/SubmitButton";
 import { sendFriendRequest, acceptFriendRequest, removeFriend } from "./actions";
 
 // A small-group leaderboard: competing against people you actually know
@@ -57,9 +58,12 @@ export default async function FriendsPage() {
           required
           className="flex-1 rounded-lg border border-line bg-surface px-4 py-2 text-sm outline-none focus:border-forge"
         />
-        <button className="press rounded-lg bg-forge px-4 py-2 text-sm font-bold text-neutral-950 transition hover:bg-forge-soft">
+        <SubmitButton
+          pendingText="Adding…"
+          className="press rounded-lg bg-forge px-4 py-2 text-sm font-bold text-neutral-950 transition hover:bg-forge-soft"
+        >
           Add
-        </button>
+        </SubmitButton>
       </form>
 
       {incoming.length > 0 && (
@@ -78,15 +82,15 @@ export default async function FriendsPage() {
                   <p className="flex-1 font-bold">{p.username}</p>
                   <form action={acceptFriendRequest}>
                     <input type="hidden" name="id" value={r.id} />
-                    <button className="press rounded-lg bg-forge px-3 py-1.5 text-xs font-bold text-neutral-950 transition hover:bg-forge-soft">
+                    <SubmitButton className="press rounded-lg bg-forge px-3 py-1.5 text-xs font-bold text-neutral-950 transition hover:bg-forge-soft">
                       Accept
-                    </button>
+                    </SubmitButton>
                   </form>
                   <form action={removeFriend}>
                     <input type="hidden" name="id" value={r.id} />
-                    <button className="press rounded-lg border border-line px-3 py-1.5 text-xs text-muted transition hover:border-red-500/40 hover:text-red-300">
+                    <SubmitButton className="press rounded-lg border border-line px-3 py-1.5 text-xs text-muted transition hover:border-red-500/40 hover:text-red-300">
                       Decline
-                    </button>
+                    </SubmitButton>
                   </form>
                 </div>
               );
@@ -111,9 +115,9 @@ export default async function FriendsPage() {
                   <p className="flex-1 text-muted">{p.username} — waiting</p>
                   <form action={removeFriend}>
                     <input type="hidden" name="id" value={r.id} />
-                    <button className="press text-xs text-muted transition hover:text-red-300">
+                    <SubmitButton className="press text-xs text-muted transition hover:text-red-300">
                       Cancel
-                    </button>
+                    </SubmitButton>
                   </form>
                 </div>
               );
