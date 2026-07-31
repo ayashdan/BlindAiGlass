@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Turn every workout into XP. Build streaks. Rank up. Forge your body like a video game.",
   icons: {
     icon: "/icon-192.png",
-    apple: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
   },
   // iOS ignores the web manifest for "Add to Home Screen" — these are what
   // actually control its standalone-app behavior and icon.
