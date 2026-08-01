@@ -43,3 +43,50 @@ export async function checkAndAwardAchievements(
   const xpAwarded = unlocked.reduce((sum, a) => sum + a.xpReward, 0);
   return { unlocked, xpAwarded };
 }
+
+export type NextAchievementProgress = {
+  key: string;
+  name: string;
+  icon: string;
+  remaining: number;
+};
+
+// The not-yet-unlocked achievement the user is closest to (by % of its
+// threshold reached) — powers the dashboard's "next reward" teaser. Only
+// considers achievements with a simple numeric threshold (see
+// ACHIEVEMENT_CONDITIONS) since "closest" isn't meaningful for booleans
+// like "beat a PR."
+export async function getNextAchievementProgress(
+  stats: AchievementStats
+): Promise<NextAchievementProgress | null> {
+  const supabase = createClient();
+
+  const [{ data: catalog }, { data: mine }] = await Promise.all([
+    supabase.from("achievements").select("id, key, name, icon"),
+    supabase.from("user_achievements").select("achievement_id"),
+  ]);
+
+  const have = new Set((mine ?? []).map((r: any) => r.achievement_id));
+  const byKey = new Map((catalog ?? []).map((a: any) => [a.key as string, a]));
+
+  let best: NextAchievementProgress | null = null;
+  let bestPct = -1;
+
+  for (const cond of ACHIEVEMENT_CONDITIONS) {
+    if (!cond.progress) continue;
+    const cat: any = byKey.get(cond.key);
+    if (!cat || have.has(cat.id)) continue;
+
+    const current = stats[cond.progress.metric] as number;
+    const threshold = cond.progress.threshold;
+    if (current >= threshold) continue; // already qualifies, not yet recorded
+
+    const pct = current / threshold;
+    if (pct > bestPct) {
+      bestPct = pct;
+      best = { key: cat.key, name: cat.name, icon: cat.icon, remaining: threshold - current };
+    }
+  }
+
+  return best;
+}

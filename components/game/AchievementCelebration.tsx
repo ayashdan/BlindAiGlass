@@ -3,9 +3,11 @@
 // A full-screen celebration shown the moment an achievement unlocks:
 // falling confetti + each badge popping in with a bounce and a glow.
 // Pure CSS animation (see globals.css) — no dependencies, no cost.
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { UnlockedAchievement } from "@/lib/types";
 import { BOSS_ACHIEVEMENTS } from "@/lib/game/cosmetics";
+import { playUnlock } from "@/lib/sound";
+import { vibrate } from "@/lib/haptics";
 
 const CONFETTI_COLORS = ["#ff6a1a", "#ff8c4b", "#ffd23f", "#ffffff", "#4ade80"];
 const CONFETTI_COUNT = 36;
@@ -31,6 +33,12 @@ export default function AchievementCelebration({
       })),
     []
   );
+
+  useEffect(() => {
+    if (achievements.length === 0) return;
+    playUnlock();
+    vibrate([25, 50, 25]);
+  }, [achievements.length]);
 
   if (achievements.length === 0) return null;
 

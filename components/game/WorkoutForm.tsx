@@ -6,10 +6,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { logWorkout } from "@/app/(app)/workout/actions";
 import AchievementCelebration from "./AchievementCelebration";
+import LevelUpCelebration from "./LevelUpCelebration";
 import { MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
 import { CLASS_INFO, type CharacterClass } from "@/lib/game/stats";
 import { CHEST_DEFS } from "@/lib/game/chests";
 import ShareButton from "@/components/ShareButton";
+import { vibrate } from "@/lib/haptics";
 import type { WorkoutResult } from "@/lib/types";
 
 const STAT_ICONS: Record<string, string> = {
@@ -40,7 +42,8 @@ export default function WorkoutForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Extract<WorkoutResult, { ok: true }> | null>(null);
-  const [celebrating, setCelebrating] = useState(false);
+  const [celebratingLevel, setCelebratingLevel] = useState(false);
+  const [celebratingAchievements, setCelebratingAchievements] = useState(false);
 
   function toggleGroup(key: string) {
     setMuscleGroups((prev) =>
@@ -55,8 +58,20 @@ export default function WorkoutForm({
     const res = await runSubmit();
     if (res && res.ok) {
       setResult(res);
-      if (res.unlocked.length > 0) setCelebrating(true);
+      vibrate(15);
+      // Level-up first (the bigger moment), achievements after it's
+      // dismissed — showing both full-screen overlays at once is a mess.
+      if (res.leveledUp) {
+        setCelebratingLevel(true);
+      } else if (res.unlocked.length > 0) {
+        setCelebratingAchievements(true);
+      }
     }
+  }
+
+  function dismissLevelCelebration() {
+    setCelebratingLevel(false);
+    if (result && result.unlocked.length > 0) setCelebratingAchievements(true);
   }
 
   async function runSubmit(): Promise<WorkoutResult | null> {
@@ -97,15 +112,23 @@ export default function WorkoutForm({
   if (result) {
     return (
       <>
-        {celebrating && (
+        {celebratingLevel && (
+          <LevelUpCelebration
+            level={result.level}
+            rank={result.rank}
+            rankChanged={result.rankChanged}
+            onDismiss={dismissLevelCelebration}
+          />
+        )}
+        {celebratingAchievements && (
           <AchievementCelebration
             achievements={result.unlocked}
-            onDismiss={() => setCelebrating(false)}
+            onDismiss={() => setCelebratingAchievements(false)}
           />
         )}
 
-        <div className="fade-in-up rounded-2xl border border-line bg-surface p-8 text-center">
-          <div className="text-5xl">💪</div>
+        <div className="fade-in-up glow-pulse rounded-2xl border border-forge/30 bg-gradient-to-br from-forge/10 via-surface to-surface p-8 text-center">
+          <div className="celebrate-bounce text-5xl">💪</div>
           <p className="mt-3 text-sm font-semibold uppercase tracking-[0.3em] text-muted">
             Workout complete
           </p>
@@ -297,7 +320,7 @@ export default function WorkoutForm({
       )}
 
       {/* Muscle groups (multi-select) */}
-      <div>
+      <div className="game-card rounded-2xl border border-line bg-surface p-4">
         <label className="mb-2 block text-sm font-semibold text-fg">
           Muscle groups worked
         </label>
@@ -323,7 +346,7 @@ export default function WorkoutForm({
                   "press rounded-lg border py-3 text-sm font-bold transition " +
                   (active
                     ? "border-forge bg-forge/15 text-forge"
-                    : "border-line bg-surface text-fg hover:border-forge/50")
+                    : "border-line bg-bg text-fg hover:border-forge/50")
                 }
               >
                 {g.label}
@@ -335,12 +358,12 @@ export default function WorkoutForm({
           value={customName}
           onChange={(e) => setCustomName(e.target.value)}
           placeholder="Workout name (optional, e.g. Boxing)"
-          className="mt-3 w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
+          className="mt-3 w-full rounded-lg border border-line bg-bg px-4 py-3 outline-none focus:border-forge"
         />
       </div>
 
       {/* Duration */}
-      <div>
+      <div className="game-card rounded-2xl border border-line bg-surface p-4">
         <label className="mb-2 block text-sm font-semibold text-fg">
           Duration (minutes)
         </label>
@@ -352,12 +375,12 @@ export default function WorkoutForm({
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
           placeholder="e.g. 45"
-          className="w-full rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
+          className="w-full rounded-lg border border-line bg-bg px-4 py-3 outline-none focus:border-forge"
         />
       </div>
 
       {/* Difficulty */}
-      <div>
+      <div className="game-card rounded-2xl border border-line bg-surface p-4">
         <label className="mb-2 block text-sm font-semibold text-fg">
           Difficulty
         </label>
@@ -372,7 +395,7 @@ export default function WorkoutForm({
                 "rounded-lg border py-3 text-sm font-bold transition " +
                 (difficulty === d.key
                   ? "border-forge bg-forge/15 text-forge"
-                  : "border-line bg-surface text-fg hover:border-forge/50")
+                  : "border-line bg-bg text-fg hover:border-forge/50")
               }
             >
               {d.label}
@@ -382,7 +405,7 @@ export default function WorkoutForm({
       </div>
 
       {/* Notes */}
-      <div>
+      <div className="game-card rounded-2xl border border-line bg-surface p-4">
         <label className="mb-2 block text-sm font-semibold text-fg">
           Notes (optional)
         </label>
@@ -391,16 +414,16 @@ export default function WorkoutForm({
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
           placeholder="How did it go?"
-          className="w-full resize-none rounded-lg border border-line bg-surface px-4 py-3 outline-none focus:border-forge"
+          className="w-full resize-none rounded-lg border border-line bg-bg px-4 py-3 outline-none focus:border-forge"
         />
       </div>
 
       <button
         type="submit"
         disabled={busy}
-        className="press w-full rounded-lg bg-forge py-4 text-lg font-black text-neutral-950 transition hover:bg-forge-soft disabled:opacity-50"
+        className="press glow-pulse w-full rounded-lg bg-forge py-4 text-lg font-black text-neutral-950 transition hover:bg-forge-soft disabled:opacity-50"
       >
-        {busy ? "Saving…" : "Complete workout"}
+        {busy ? "Saving…" : "⚔️ Complete workout"}
       </button>
     </form>
   );

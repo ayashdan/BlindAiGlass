@@ -11,7 +11,10 @@ import { logRestDay } from "@/app/(app)/recovery/actions";
 import { dailyMotivation } from "@/lib/game/motivation";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
 import { getSeasonStatus } from "@/lib/game/season-server";
+import { getNextAchievementProgress } from "@/lib/game/achievements-server";
+import NextRewardTeaser from "@/components/NextRewardTeaser";
 import ThemeToggle from "@/components/ThemeToggle";
+import SoundToggle from "@/components/SoundToggle";
 import ShareButton from "@/components/ShareButton";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import NotificationOptIn from "@/components/NotificationOptIn";
@@ -66,7 +69,7 @@ export default async function Dashboard() {
 
   // Independent of each other and of the profile fetch above — run together
   // instead of one-at-a-time round trips.
-  const [quests, season, friendRowsRes] = await Promise.all([
+  const [quests, season, friendRowsRes, nextAchievement] = await Promise.all([
     ensureTodayQuests(user.id),
     getSeasonStatus(user.id),
     supabase
@@ -74,7 +77,18 @@ export default async function Dashboard() {
       .select("user_id, friend_id")
       .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
       .eq("status", "accepted"),
+    getNextAchievementProgress({
+      totalWorkouts: profile.total_workouts,
+      currentStreak: profile.current_streak,
+      level: progress.level,
+      hasNewPR: false,
+      muscleGroupVariety: profile.trained_muscle_groups?.length ?? 0,
+    }),
   ]);
+
+  // Rare Chests drop every 5 levels — how close is the next one.
+  const nextChestLevel = (Math.floor(progress.level / 5) + 1) * 5;
+  const levelsToNextChest = nextChestLevel - progress.level;
 
   const characterStats = {
     power: profile.stat_power,
@@ -146,6 +160,7 @@ export default async function Dashboard() {
         <div className="flex flex-wrap items-center justify-end gap-2">
           <InstallPrompt />
           <NotificationOptIn />
+          <SoundToggle />
           <ThemeToggle />
           {isAdminEmail(user.email) && (
             <Link
@@ -196,6 +211,8 @@ export default async function Dashboard() {
           />
         </div>
       </section>
+
+      <NextRewardTeaser levelsToNextChest={levelsToNextChest} nextAchievement={nextAchievement} />
 
       {/* Character build */}
       <section

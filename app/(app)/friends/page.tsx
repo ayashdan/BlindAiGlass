@@ -76,7 +76,7 @@ export default async function FriendsPage() {
               return (
                 <div
                   key={r.id}
-                  className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3"
+                  className="game-card flex items-center gap-3 rounded-xl border border-line bg-surface p-3"
                 >
                   <AvatarDisplay avatarUrl={p.avatar_url} avatar={p.avatar} size={32} />
                   <p className="flex-1 font-bold">{p.username}</p>
@@ -109,7 +109,7 @@ export default async function FriendsPage() {
               return (
                 <div
                   key={r.id}
-                  className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3"
+                  className="game-card flex items-center gap-3 rounded-xl border border-line bg-surface p-3"
                 >
                   <AvatarDisplay avatarUrl={p.avatar_url} avatar={p.avatar} size={32} />
                   <p className="flex-1 text-muted">{p.username} — waiting</p>
@@ -134,10 +134,13 @@ export default async function FriendsPage() {
           {friendProfiles.map((p, i) => (
             <div
               key={p.id}
-              className="fade-in-up flex items-center gap-3 rounded-xl border border-line bg-surface p-3"
+              className={
+                "fade-in-up game-card flex items-center gap-3 rounded-xl border p-3 " +
+                (i < 3 ? "border-amber-500/30 bg-amber-500/5" : "border-line bg-surface")
+              }
               style={{ animationDelay: `${Math.min(i, 10) * 0.03}s` }}
             >
-              <span className="w-8 text-center font-black text-muted">
+              <span className={"w-8 text-center font-black " + (i < 3 ? "flame-flicker text-lg" : "text-muted")}>
                 {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
               </span>
               <AvatarDisplay avatarUrl={p.avatar_url} avatar={p.avatar} size={32} />

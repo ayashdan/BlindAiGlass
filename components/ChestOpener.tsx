@@ -7,6 +7,8 @@ import { useState, useTransition } from "react";
 import { CHEST_DEFS, type ChestTier } from "@/lib/game/chests";
 import { openChestAction } from "@/app/(app)/chests/actions";
 import ChestGraphic from "./ChestGraphic";
+import { playChestOpen } from "@/lib/sound";
+import { vibrate } from "@/lib/haptics";
 
 const COLOR_CLASSES: Record<string, { border: string; bg: string; text: string; glow: string }> = {
   emerald: { border: "border-emerald-500/40", bg: "bg-emerald-500/5", text: "text-emerald-400", glow: "" },
@@ -36,6 +38,7 @@ export default function ChestOpener({
     setReveal(null);
     setLidOpen(false);
     setShaking(true);
+    vibrate(12);
 
     startTransition(async () => {
       const result = await openChestAction(tier);
@@ -46,6 +49,8 @@ export default function ChestOpener({
           setLidOpen(true);
           setCount((c) => Math.max(0, c - 1));
           setReveal({ xp: result.reward.xp, freeze: result.reward.freeze });
+          playChestOpen();
+          vibrate([20, 40, 60]);
         } else {
           setError(result.error);
         }

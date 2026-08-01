@@ -39,7 +39,7 @@ export default async function AchievementsPage() {
             <div
               key={a.id}
               className={
-                "fade-in-up flex items-center gap-4 rounded-xl border p-4 transition " +
+                "fade-in-up game-card flex items-center gap-4 rounded-xl border p-4 transition " +
                 (unlocked
                   ? "border-forge/40 bg-forge/5 shadow-[0_0_18px_rgba(255,106,26,0.15)]"
                   : "border-line bg-surface opacity-60")
