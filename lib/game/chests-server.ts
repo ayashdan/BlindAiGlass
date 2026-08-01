@@ -7,46 +7,33 @@ import { applyXp } from "./xp-server";
 
 const FREEZE_CAP = 2; // keep in sync with app/(app)/workout/actions.ts
 
-const COLUMN: Record<ChestTier, "chests_common" | "chests_rare" | "chests_legendary"> = {
-  common: "chests_common",
-  rare: "chests_rare",
-  legendary: "chests_legendary",
-};
-
-// Adds `count` unopened chests of a tier to a user's inventory. Takes the
-// caller's already-verified user id — see applyXp for why.
+// Adds `count` unopened chests of a tier to a user's inventory. A single
+// atomic RPC call (see 0025_chest_rpcs.sql) instead of a select-then-update
+// — this sits directly in the hot workout-logging path (a Common Chest
+// drops every workout), so the extra round trip was worth cutting. Takes
+// the caller's already-verified user id — see applyXp for why.
 export async function awardChest(userId: string, tier: ChestTier, count = 1): Promise<void> {
   if (count <= 0) return;
   const supabase = createClient();
-  const column = COLUMN[tier];
-
-  const { data: prof } = await supabase.from("profiles").select(column).eq("id", userId).single();
-  const current = ((prof as any)?.[column] as number) ?? 0;
-  await supabase.from("profiles").update({ [column]: current + count }).eq("id", userId);
+  await supabase.rpc("award_chest", { p_user_id: userId, p_tier: tier, p_amount: count });
 }
 
 export type OpenChestResult =
   | { ok: false; error: string }
   | { ok: true; tier: ChestTier; reward: ChestReward; level: number; leveledUp: boolean };
 
-// Opens one chest of a tier: consumes it from inventory, rolls a reward
-// (always positive — see chests.ts), and applies it immediately.
+// Opens one chest of a tier: atomically consumes it from inventory (fails
+// cleanly instead of racing — two fast taps can no longer both succeed off
+// a stale read), rolls a reward (always positive — see chests.ts), and
+// applies it immediately.
 export async function openChest(userId: string, tier: ChestTier): Promise<OpenChestResult> {
   const supabase = createClient();
-  const column = COLUMN[tier];
 
-  const { data: prof } = await supabase
-    .from("profiles")
-    .select(`${column}, streak_freezes`)
-    .eq("id", userId)
-    .single();
-  const have = ((prof as any)?.[column] as number) ?? 0;
-  if (have <= 0) return { ok: false, error: "No chest of that type to open." };
-
-  await supabase
-    .from("profiles")
-    .update({ [column]: have - 1 })
-    .eq("id", userId);
+  const [{ data: claimed }, { data: prof }] = await Promise.all([
+    supabase.rpc("claim_chest", { p_user_id: userId, p_tier: tier }),
+    supabase.from("profiles").select("streak_freezes").eq("id", userId).single(),
+  ]);
+  if (!claimed) return { ok: false, error: "No chest of that type to open." };
 
   const reward = rollChestReward(tier);
   const xpResult = await applyXp(userId, reward.xp);
