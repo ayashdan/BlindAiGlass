@@ -147,9 +147,26 @@ export async function logSteps(userId: string, stepsToAdd: number): Promise<Step
   };
 }
 
-export async function setStepGoal(userId: string, goal: number): Promise<{ ok: boolean; goal: number }> {
+// Returns the goal that's ACTUALLY in the database after the write, not
+// just an echo of what was requested — an update blocked by RLS or any
+// other issue succeeds silently with zero rows affected (Postgrest doesn't
+// error on that), so this confirms the row via .select() instead of taking
+// the write on faith.
+export async function setStepGoal(
+  userId: string,
+  goal: number
+): Promise<{ ok: boolean; goal: number; error?: string }> {
   const clamped = clampStepGoal(goal);
   const supabase = createClient();
-  await supabase.from("profiles").update({ step_goal: clamped }).eq("id", userId);
-  return { ok: true, goal: clamped };
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ step_goal: clamped })
+    .eq("id", userId)
+    .select("step_goal")
+    .single();
+
+  if (error || !data) {
+    return { ok: false, goal: clamped, error: error?.message ?? "Could not save your goal — try again." };
+  }
+  return { ok: true, goal: data.step_goal };
 }

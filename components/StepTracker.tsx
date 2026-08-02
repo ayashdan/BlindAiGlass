@@ -83,18 +83,26 @@ export default function StepTracker({
   async function saveGoal() {
     const n = parseInt(goalInput, 10);
     if (!Number.isFinite(n)) {
-      setEditingGoal(false);
+      setError("Enter a valid goal.");
       return;
     }
+    setError(null);
     setBusy(true);
     try {
       const res = await setStepGoalAction(n);
+      if (!res.ok) {
+        // Keep the editor open with what was typed so it's obvious the
+        // save didn't actually happen — closing it here would make a
+        // failed save look identical to a successful one.
+        setError(res.error ?? "Could not save your goal — try again.");
+        return;
+      }
       setGoal(res.goal);
       setGoalInput(String(res.goal));
       setGoalMet(steps >= res.goal);
+      setEditingGoal(false);
     } finally {
       setBusy(false);
-      setEditingGoal(false);
     }
   }
 

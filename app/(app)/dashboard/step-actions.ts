@@ -20,14 +20,14 @@ export async function logStepsAction(steps: number): Promise<StepResult> {
   return result;
 }
 
-export async function setStepGoalAction(goal: number): Promise<{ ok: boolean; goal: number }> {
+export async function setStepGoalAction(goal: number): Promise<{ ok: boolean; goal: number; error?: string }> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, goal };
+  if (!user) return { ok: false, goal, error: "You are not logged in." };
 
   const result = await setStepGoal(user.id, goal);
-  revalidatePath("/dashboard");
+  if (result.ok) revalidatePath("/dashboard");
   return result;
 }
