@@ -285,6 +285,20 @@ body {
   animation: beacon-pulse 1.8s ease-out infinite;
 }
 
+/* Clash-Royale-style paging between the five main tabs (SwipeNav) — the
+   incoming screen slides in from the direction it "arrived" from, whether
+   you got there by swiping or tapping the bottom nav. */
+@keyframes page-slide-in-left {
+  from { transform: translateX(28px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes page-slide-in-right {
+  from { transform: translateX(-28px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.page-slide-in-left { animation: page-slide-in-left 0.22s ease-out; }
+.page-slide-in-right { animation: page-slide-in-right 0.22s ease-out; }
+
 @media (prefers-reduced-motion: reduce) {
   .fade-in-up,
   .celebrate-pop,
@@ -299,7 +313,9 @@ body {
   .chest-shake,
   .shop-ring::before,
   .ember-particle,
-  .beacon-pulse {
+  .beacon-pulse,
+  .page-slide-in-left,
+  .page-slide-in-right {
     animation: none !important;
   }
   .press:active {
