@@ -2,11 +2,16 @@
 // Manual entry (see 0026_step_tracking.sql for why there's no auto-sync).
 // Each call ADDS to today's running total rather than replacing it — you
 // log however many more steps you've done since the last entry, the same
-// way logging a second workout doesn't erase the first. The day's target
-// locks in once you hit it, so raising your goal later the same day can't
-// retroactively "unmet" an already-earned reward, but can still raise the
-// bar for a day you haven't hit yet, and logging more steps after the goal
-// is met never re-awards the XP/chest — it just keeps the count accurate.
+// way logging a second workout doesn't erase the first.
+//
+// The goal shown and evaluated is always your CURRENT profile.step_goal —
+// never a frozen snapshot from earlier today. Raise it mid-day and the
+// progress bar immediately targets the new number. XP already banked today
+// is never clawed back if you lower the goal, and raising it to a harder
+// target you then reach pays out the difference on top of what's already
+// banked (not a second full reward). The Common Chest, though, pays out
+// at most once per day no matter how many times you raise the goal and
+// clear it again.
 import { createClient } from "@/lib/supabase/server";
 import { applyXp } from "./xp-server";
 import { awardChest } from "./chests-server";
@@ -29,20 +34,20 @@ export async function getTodayStepStatus(userId: string): Promise<StepStatus> {
     supabase.from("profiles").select("step_goal").eq("id", userId).single(),
     supabase
       .from("step_logs")
-      .select("steps, goal, goal_met, xp_awarded, chest_awarded")
+      .select("steps, xp_awarded, chest_awarded")
       .eq("user_id", userId)
       .eq("log_date", todayStr)
       .maybeSingle(),
   ]);
 
-  const fallbackGoal = (profile as any)?.step_goal ?? 6000;
-  if (!log) return { steps: 0, goal: fallbackGoal, goalMet: false, xpAwarded: 0, chestAwarded: false };
+  const goal = (profile as any)?.step_goal ?? 6000;
+  const steps = log?.steps ?? 0;
   return {
-    steps: log.steps,
-    goal: log.goal,
-    goalMet: log.goal_met,
-    xpAwarded: log.xp_awarded,
-    chestAwarded: log.chest_awarded,
+    steps,
+    goal,
+    goalMet: steps >= goal,
+    xpAwarded: log?.xp_awarded ?? 0,
+    chestAwarded: log?.chest_awarded ?? false,
   };
 }
 
@@ -75,39 +80,25 @@ export async function logSteps(userId: string, stepsToAdd: number): Promise<Step
     supabase.from("profiles").select("step_goal").eq("id", userId).single(),
     supabase
       .from("step_logs")
-      .select("steps, goal, goal_met")
+      .select("steps, xp_awarded, chest_awarded")
       .eq("user_id", userId)
       .eq("log_date", todayStr)
       .maybeSingle(),
   ]);
   const currentGoal = (profile as any)?.step_goal ?? 6000;
+  const priorXpAwarded = existing?.xp_awarded ?? 0;
+  const priorChestAwarded = existing?.chest_awarded ?? false;
+
   const newSteps = Math.min(200000, (existing?.steps ?? 0) + stepsToAdd);
+  const goalMetNow = newSteps >= currentGoal;
 
-  // Already met today — target and reward stay locked, just keep the count
-  // accurate as more steps come in. Never re-awards.
-  if (existing?.goal_met) {
-    await supabase
-      .from("step_logs")
-      .update({ steps: newSteps, updated_at: new Date().toISOString() })
-      .eq("user_id", userId)
-      .eq("log_date", todayStr);
-    return {
-      ok: true,
-      steps: newSteps,
-      goal: existing.goal,
-      goalMet: true,
-      newlyMet: false,
-      xpEarned: 0,
-      leveledUp: false,
-      level: 0,
-      rank: "",
-      rankChanged: false,
-      chestEarned: false,
-    };
-  }
-
-  const newlyMet = newSteps >= currentGoal;
-  const xpEarned = newlyMet ? stepGoalXp(currentGoal) : 0;
+  // The full reward for today's (current) goal, minus whatever's already
+  // banked — 0 if the goal isn't met yet, or if it's met but a harder goal
+  // met earlier already paid out more than this one's worth.
+  const xpEarned = goalMetNow ? Math.max(0, stepGoalXp(currentGoal) - priorXpAwarded) : 0;
+  const chestEarned = goalMetNow && !priorChestAwarded;
+  const newXpAwarded = priorXpAwarded + xpEarned;
+  const newChestAwarded = priorChestAwarded || chestEarned;
 
   await supabase.from("step_logs").upsert(
     {
@@ -115,44 +106,44 @@ export async function logSteps(userId: string, stepsToAdd: number): Promise<Step
       log_date: todayStr,
       steps: newSteps,
       goal: currentGoal,
-      goal_met: newlyMet,
-      xp_awarded: newlyMet ? xpEarned : 0,
-      chest_awarded: newlyMet,
+      goal_met: goalMetNow,
+      xp_awarded: newXpAwarded,
+      chest_awarded: newChestAwarded,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,log_date" }
   );
 
-  if (!newlyMet) {
-    return {
-      ok: true,
-      steps: newSteps,
-      goal: currentGoal,
-      goalMet: false,
-      newlyMet: false,
-      xpEarned: 0,
-      leveledUp: false,
-      level: 0,
-      rank: "",
-      rankChanged: false,
-      chestEarned: false,
-    };
-  }
+  let leveledUp = false;
+  let level = 0;
+  let rank = "";
+  let rankChanged = false;
 
-  const [xpResult] = await Promise.all([applyXp(userId, xpEarned), awardChest(userId, "common", 1)]);
+  if (xpEarned > 0 || chestEarned) {
+    const [xpResult] = await Promise.all([
+      xpEarned > 0 ? applyXp(userId, xpEarned) : Promise.resolve(null),
+      chestEarned ? awardChest(userId, "common", 1) : Promise.resolve(),
+    ]);
+    if (xpResult) {
+      leveledUp = xpResult.leveledUp;
+      level = xpResult.level;
+      rank = xpResult.rank;
+      rankChanged = xpResult.rankChanged;
+    }
+  }
 
   return {
     ok: true,
     steps: newSteps,
     goal: currentGoal,
-    goalMet: true,
-    newlyMet: true,
+    goalMet: goalMetNow,
+    newlyMet: xpEarned > 0 || chestEarned,
     xpEarned,
-    leveledUp: xpResult.leveledUp,
-    level: xpResult.level,
-    rank: xpResult.rank,
-    rankChanged: xpResult.rankChanged,
-    chestEarned: true,
+    leveledUp,
+    level,
+    rank,
+    rankChanged,
+    chestEarned,
   };
 }
 

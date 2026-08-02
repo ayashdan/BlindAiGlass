@@ -91,6 +91,7 @@ export default function StepTracker({
       const res = await setStepGoalAction(n);
       setGoal(res.goal);
       setGoalInput(String(res.goal));
+      setGoalMet(steps >= res.goal);
     } finally {
       setBusy(false);
       setEditingGoal(false);

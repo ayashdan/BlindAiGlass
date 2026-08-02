@@ -71,7 +71,7 @@ export default async function Dashboard() {
     }),
     supabase
       .from("step_logs")
-      .select("steps, goal, goal_met")
+      .select("steps")
       .eq("user_id", user.id)
       .eq("log_date", todayStr)
       .maybeSingle(),
@@ -207,8 +207,8 @@ export default async function Dashboard() {
       <div className="mt-4">
         <StepTracker
           initialSteps={todaysSteps?.steps ?? 0}
-          initialGoal={todaysSteps?.goal ?? profile.step_goal ?? 6000}
-          initialGoalMet={todaysSteps?.goal_met ?? false}
+          initialGoal={profile.step_goal ?? 6000}
+          initialGoalMet={(todaysSteps?.steps ?? 0) >= (profile.step_goal ?? 6000)}
         />
       </div>
 
