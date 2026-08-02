@@ -12,6 +12,7 @@ import { logStepsAction, setStepGoalAction } from "@/app/(app)/dashboard/step-ac
 import LevelUpCelebration from "@/components/game/LevelUpCelebration";
 import { stepGoalXp, MIN_STEP_GOAL, MAX_STEP_GOAL, STEP_GOAL_STEP } from "@/lib/game/steps";
 import { vibrate } from "@/lib/haptics";
+import { DEFAULT_STEP_GOAL } from "@/lib/game/steps";
 
 export default function StepTracker({
   initialSteps,
@@ -22,12 +23,18 @@ export default function StepTracker({
   initialGoal: number;
   initialGoalMet: boolean;
 }) {
-  const [steps, setSteps] = useState(initialSteps);
-  const [goal, setGoal] = useState(initialGoal);
+  // Defensive fallback: if the step_goal column/migration hasn't landed yet,
+  // these can arrive as undefined — better to show a sane default than to
+  // crash the whole dashboard on a missing migration.
+  const safeInitialSteps = initialSteps || 0;
+  const safeInitialGoal = initialGoal || DEFAULT_STEP_GOAL;
+
+  const [steps, setSteps] = useState(safeInitialSteps);
+  const [goal, setGoal] = useState(safeInitialGoal);
   const [goalMet, setGoalMet] = useState(initialGoalMet);
-  const [input, setInput] = useState(initialSteps > 0 ? String(initialSteps) : "");
+  const [input, setInput] = useState(safeInitialSteps > 0 ? String(safeInitialSteps) : "");
   const [editingGoal, setEditingGoal] = useState(false);
-  const [goalInput, setGoalInput] = useState(String(initialGoal));
+  const [goalInput, setGoalInput] = useState(String(safeInitialGoal));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reward, setReward] = useState<{ xp: number; chest: boolean } | null>(null);

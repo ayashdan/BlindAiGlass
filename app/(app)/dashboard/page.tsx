@@ -207,7 +207,7 @@ export default async function Dashboard() {
       <div className="mt-4">
         <StepTracker
           initialSteps={todaysSteps?.steps ?? 0}
-          initialGoal={todaysSteps?.goal ?? profile.step_goal}
+          initialGoal={todaysSteps?.goal ?? profile.step_goal ?? 6000}
           initialGoalMet={todaysSteps?.goal_met ?? false}
         />
       </div>
