@@ -356,17 +356,18 @@ create policy "push_subscriptions_delete_own"
   keyboard for 30 characters)
 
 **How it works:** click the 🔔 button on your dashboard header to opt in
-(browser will ask for notification permission). Once a day (8pm UTC — edit
-the schedule in `vercel.json` if you want a different time), Vercel Cron
-hits `/api/cron/streak-reminder`, which notifies everyone with an active
-streak who hasn't logged a workout yet that day. Requires redeploying
-after adding the env vars for the cron to actually be registered.
+(browser will ask for notification permission). Vercel Cron then hits two
+endpoints on a schedule (see `vercel.json`): `/api/cron/reward-reminder`
+(twice daily, noon + 8pm UTC — nudges anyone exactly one level from their
+next Rare Chest) and `/api/cron/workout-reminder` (once every UTC hour —
+checks each user's own local time and messages anyone who hasn't worked
+out yet once it hits 3pm or 5pm **for them**). Requires redeploying after
+adding the env vars for the crons to actually be registered.
 
 **To test:** enable notifications on your dashboard, then visit
-`/api/cron/streak-reminder` directly in a new tab with the header
-`Authorization: Bearer <your CRON_SECRET>` (use a tool like Postman, or
-just trust the daily schedule) — you should get a push notification if
-you have an active streak and haven't worked out today.
+`/api/cron/reward-reminder` or `/api/cron/workout-reminder` directly in a
+new tab with the header `Authorization: Bearer <your CRON_SECRET>` (use a
+tool like Postman, or just trust the schedule).
 
 **Also in this update:** the dashboard now fires several independent
 Supabase queries in parallel (quests, season status, friends) instead of
@@ -393,29 +394,37 @@ a phone's home screen and opens like a native app (no browser bar).
   is almost certainly why the 🔔 button didn't work. Install the app first
   via the new 📲 button, then try 🔔 again from inside the installed app.
 
-### Twice-daily reminders + test notification button
+### Reward + workout reminders (hourly local-time checks)
 
 No migration — pure code/config.
 
-- `vercel.json` now schedules the streak-reminder cron **twice a day**
-  (12pm and 8pm UTC) instead of once.
-- **Important free-tier caveat:** Vercel's Hobby (free) plan has
-  historically limited Cron Jobs to firing **once per day**, regardless of
-  how many entries or what schedule you set — this may get silently capped
-  to a single daily run. Redeploy and watch it for a couple of days; if
-  you only ever see one notification a day, that's Vercel's Hobby limit,
-  not a bug here. Free workaround if that happens: use
-  **[cron-job.org](https://cron-job.org)** (free, no card) to `GET` your
-  `https://your-app.vercel.app/api/cron/streak-reminder` URl with header
-  `Authorization: Bearer <your CRON_SECRET>` on whatever schedule you want
-  — it calls the same endpoint, Vercel's cron limit doesn't apply since
-  the request isn't coming from Vercel's own scheduler.
+- `/api/cron/reward-reminder` — twice a day (noon + 8pm UTC), nudges anyone
+  exactly one level from their next Rare Chest.
+- `/api/cron/workout-reminder` — fires **once every UTC hour** (24 separate
+  entries in `vercel.json`, since Vercel's Hobby plan caps any single cron
+  entry to once a day — 24 once-a-day entries is the free workaround for
+  "hourly"). Each run checks every user's own current local hour and only
+  messages the ones where it's actually 3pm or 5pm *for them* and they
+  haven't logged a workout yet that day — two separate nudges per user per
+  day, at their own local 3pm and 5pm, not the server's clock.
+- **If notifications never seem to fire on their own:** almost always means
+  `CRON_SECRET` was never added in Vercel's environment variables, or was
+  added without a redeploy afterward — the cron schedule only registers
+  from the config that was live at deploy time. Add it, redeploy, then
+  wait for the schedule (or hit an endpoint directly, see below).
+- **If it's confirmed set and still not firing:** Vercel's Hobby plan has
+  in the past silently capped how many cron entries actually run — free
+  workaround: **[cron-job.org](https://cron-job.org)** (free, no card) to
+  `GET` `https://your-app.vercel.app/api/cron/workout-reminder` (or
+  `reward-reminder`) with header `Authorization: Bearer <your CRON_SECRET>`
+  on whatever schedule you want — same endpoint, doesn't count against
+  Vercel's own scheduler limits.
 - **Test notification button** — `/admin/settings` → "🔔 Send me a test
   notification" sends an immediate push to your own device(s), as long as
-  you've already tapped 🔔 on the dashboard on that device. This is the
-  fastest way to confirm the whole pipeline (VAPID keys, subscription,
-  service worker) actually works, without waiting for the schedule or
-  faking a streak.
+  you've already tapped 🔔 on the dashboard on that device. Good for
+  confirming the pipeline itself (VAPID keys, subscription, service
+  worker) works, but doesn't prove the cron schedule is actually live —
+  use the direct-endpoint-with-header method above for that.
 
 ### Choose today's split (free)
 
