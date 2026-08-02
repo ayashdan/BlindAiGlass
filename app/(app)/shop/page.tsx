@@ -29,7 +29,7 @@ export default async function ShopPage() {
         up on the leaderboard.
       </p>
 
-      <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-300">
+      <div className="forge-panel forge-accent-amber mb-6 px-4 py-3 text-sm text-amber-300">
         🚧 The shop is a preview — payments aren't live yet, so nothing can
         be purchased right now. Prices below are what's planned at launch.
       </div>

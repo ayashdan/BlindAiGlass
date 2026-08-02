@@ -12,7 +12,7 @@ export default function ShopItemCard({ item }: { item: ShopItem }) {
   const [clicked, setClicked] = useState(false);
 
   return (
-    <div className="game-card rounded-2xl border border-line bg-surface p-4">
+    <div className="forge-panel p-4">
       <div className="flex items-start gap-3">
         {item.previewClass ? (
           <div className={`shop-ring ${item.previewClass} flex-shrink-0`}>
@@ -42,7 +42,7 @@ export default function ShopItemCard({ item }: { item: ShopItem }) {
         ) : (
           <button
             onClick={() => setClicked(true)}
-            className="press rounded-lg bg-forge px-3 py-1.5 text-xs font-bold text-neutral-950 transition hover:bg-forge-soft"
+            className="press-3d rounded-lg bg-forge px-3 py-1.5 text-xs font-bold text-neutral-950 transition hover:bg-forge-soft"
           >
             Buy
           </button>

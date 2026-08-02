@@ -6,6 +6,14 @@ import { getSeasonStatus } from "@/lib/game/season-server";
 import WorldMapPath from "@/components/WorldMapPath";
 import type { Profile } from "@/lib/types";
 
+const EMBERS = Array.from({ length: 14 }, (_, i) => ({
+  left: (i * 37) % 100,
+  size: 3 + ((i * 13) % 5),
+  delay: (i * 0.6) % 6,
+  duration: 5 + ((i * 7) % 5),
+  drift: (i % 2 === 0 ? 1 : -1) * (10 + (i % 3) * 6),
+}));
+
 // The journey, visualized — every 5 levels is a waypoint (a Rare Chest),
 // rank thresholds are the bigger landmarks, and the current season is
 // shown as the stretch of road you're on right now.
@@ -36,7 +44,7 @@ export default async function WorldMapPage() {
       </p>
 
       {season && (
-        <section className="game-card mb-6 rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-5">
+        <section className="forge-panel forge-panel-hot mb-6 p-5">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-black uppercase tracking-wide text-fuchsia-400">
               🎖️ Season {season.seasonNumber}
@@ -55,7 +63,29 @@ export default async function WorldMapPage() {
         </section>
       )}
 
-      <div className="game-card rounded-2xl border border-line bg-surface p-4">
+      {/* Fixed to the viewport (not the tall scrolling map below) so the
+          embers stay visible as ambient atmosphere no matter how far
+          down the journey you've scrolled. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 top-16 z-[1] overflow-hidden">
+        {EMBERS.map((e, i) => (
+          <span
+            key={i}
+            className="ember-particle"
+            style={
+              {
+                left: `${e.left}%`,
+                width: e.size,
+                height: e.size,
+                animationDelay: `${e.delay}s`,
+                animationDuration: `${e.duration}s`,
+                "--drift": `${e.drift}px`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+
+      <div className="forge-panel relative overflow-hidden p-0">
         <WorldMapPath currentLevel={progress.level} />
       </div>
     </main>

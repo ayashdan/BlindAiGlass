@@ -44,7 +44,8 @@ export default async function ChestsPage() {
 
       <Link
         href="/shop"
-        className="game-card mt-6 flex items-center justify-between rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 px-5 py-4 transition hover:border-fuchsia-500/60"
+        className="forge-panel press-3d forge-accent-fuchsia mt-6 flex items-center justify-between px-5 py-4 transition"
+        style={{ "--press-shadow": "rgb(162 28 175 / 0.5)" } as React.CSSProperties}
       >
         <span className="font-bold">🛒 Buy more in the Shop</span>
         <span className="text-muted">→</span>

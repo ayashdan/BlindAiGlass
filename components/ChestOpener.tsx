@@ -10,10 +10,10 @@ import ChestGraphic from "./ChestGraphic";
 import { playChestOpen } from "@/lib/sound";
 import { vibrate } from "@/lib/haptics";
 
-const COLOR_CLASSES: Record<string, { border: string; bg: string; text: string; glow: string }> = {
-  emerald: { border: "border-emerald-500/40", bg: "bg-emerald-500/5", text: "text-emerald-400", glow: "" },
-  sky: { border: "border-sky-500/40", bg: "bg-sky-500/5", text: "text-sky-400", glow: "glow-pulse" },
-  amber: { border: "border-amber-500/40", bg: "bg-amber-500/5", text: "text-amber-400", glow: "glow-pulse" },
+const COLOR_CLASSES: Record<string, { accent: string; text: string; glow: string; press: string }> = {
+  emerald: { accent: "forge-accent-emerald", text: "text-emerald-400", glow: "", press: "rgb(4 120 87 / 0.5)" },
+  sky: { accent: "forge-accent-sky", text: "text-sky-400", glow: "glow-pulse", press: "rgb(2 132 199 / 0.5)" },
+  amber: { accent: "forge-accent-amber", text: "text-amber-400", glow: "glow-pulse", press: "rgb(180 83 9 / 0.5)" },
 };
 
 export default function ChestOpener({
@@ -60,7 +60,7 @@ export default function ChestOpener({
 
   return (
     <div
-      className={`game-card rounded-2xl border ${colors.border} ${colors.bg} p-5 text-center ${count > 0 && !lidOpen ? colors.glow : ""}`}
+      className={`forge-panel ${colors.accent} p-5 text-center ${count > 0 && !lidOpen ? colors.glow : ""}`}
     >
       <div className={`mx-auto w-28 ${shaking ? "chest-shake" : ""}`}>
         <ChestGraphic tier={tier} open={lidOpen} />
@@ -73,7 +73,8 @@ export default function ChestOpener({
       <button
         onClick={open}
         disabled={count <= 0 || pending || shaking}
-        className="press mt-3 w-full rounded-lg bg-forge py-2.5 text-sm font-bold text-neutral-950 transition hover:bg-forge-soft disabled:cursor-not-allowed disabled:bg-surface2 disabled:text-muted"
+        className="press-3d mt-3 w-full rounded-lg bg-forge py-2.5 text-sm font-bold text-neutral-950 transition hover:bg-forge-soft disabled:cursor-not-allowed disabled:bg-surface2 disabled:text-muted disabled:shadow-none"
+        style={{ "--press-shadow": colors.press } as React.CSSProperties}
       >
         {count <= 0 ? "None to open" : shaking ? "Opening…" : "Open"}
       </button>

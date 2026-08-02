@@ -159,39 +159,42 @@ export default async function Dashboard() {
         "{motivation}"
       </p>
 
-      {/* Level + XP card */}
-      <section className="fade-in-up game-card glow-pulse relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6">
-        <div className="mb-3 flex items-baseline justify-between">
-          <span className="text-lg font-bold">
-            Level <AnimatedNumber value={progress.level} className="text-2xl font-black text-amber-300" />
-          </span>
-          <span className="rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
-            {rank}
-          </span>
-        </div>
-        <div className="xp-bar h-3 w-full rounded-full bg-surface2">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-forge to-amber-400 transition-all duration-700 ease-out"
-            style={{ width: `${progress.percent}%` }}
-          />
-        </div>
-        <p className="mt-2 text-sm text-muted">
-          {progress.atMax ? (
-            "Max level reached!"
-          ) : (
-            <>
-              <AnimatedNumber value={progress.into} className="font-semibold text-fg" /> /{" "}
-              {progress.need} XP · {progress.remaining} to next level
-            </>
-          )}
-        </p>
+      {/* Level + XP card — the bar itself is a door to the World Map */}
+      <div className="fade-in-up forge-panel forge-panel-hot glow-pulse relative overflow-hidden p-6">
+        <Link href="/world" className="block">
+          <div className="mb-3 flex items-baseline justify-between">
+            <span className="text-lg font-bold">
+              Level <AnimatedNumber value={progress.level} className="text-2xl font-black text-amber-300" />
+            </span>
+            <span className="rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
+              {rank}
+            </span>
+          </div>
+          <div className="xp-bar h-3 w-full rounded-full bg-surface2">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-forge to-amber-400 transition-all duration-700 ease-out"
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+          <p className="mt-2 text-sm text-muted">
+            {progress.atMax ? (
+              "Max level reached!"
+            ) : (
+              <>
+                <AnimatedNumber value={progress.into} className="font-semibold text-fg" /> /{" "}
+                {progress.need} XP · {progress.remaining} to next level
+              </>
+            )}
+            <span className="ml-1 text-forge">· View on the map →</span>
+          </p>
+        </Link>
         <div className="mt-3">
           <ShareButton
             text={`I just hit Level ${progress.level} (${rank}) on Forge! 🔥 ${profile.current_streak} day streak.`}
             label="Share progress"
           />
         </div>
-      </section>
+      </div>
 
       <NextRewardTeaser levelsToNextChest={levelsToNextChest} nextAchievement={nextAchievement} />
 
@@ -326,6 +329,15 @@ const ACCENTS = {
   fuchsia: "border-fuchsia-500/30 bg-fuchsia-500/5",
 } as const;
 
+const DOOR_GLOW: Record<keyof typeof ACCENTS, string> = {
+  sky: "rgb(2 132 199 / 0.5)",
+  violet: "rgb(109 40 217 / 0.5)",
+  emerald: "rgb(4 120 87 / 0.5)",
+  amber: "rgb(180 83 9 / 0.5)",
+  rose: "rgb(190 18 60 / 0.5)",
+  fuchsia: "rgb(162 28 175 / 0.5)",
+};
+
 function Door({
   href,
   icon,
@@ -344,8 +356,8 @@ function Door({
   return (
     <Link
       href={href}
-      className={`fade-in-up game-card relative flex flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-4 text-center transition hover:brightness-110 ${ACCENTS[accent]}`}
-      style={{ animationDelay: `${delay}s` }}
+      className={`fade-in-up forge-panel press-3d forge-accent-${accent} relative flex flex-col items-center justify-center gap-1 px-2 py-4 text-center transition hover:brightness-110`}
+      style={{ animationDelay: `${delay}s`, "--press-shadow": DOOR_GLOW[accent] } as React.CSSProperties}
     >
       {badge !== undefined && (
         <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-forge px-1.5 text-xs font-black text-neutral-950">

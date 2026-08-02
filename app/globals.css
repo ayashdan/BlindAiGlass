@@ -202,6 +202,89 @@ body {
 .shop-ring-gold::before { background: conic-gradient(from 0deg, #fbbf24, #fef3c7, #d97706, #fbbf24); }
 .shop-ring-void::before { background: conic-gradient(from 0deg, #7c3aed, #0a0a0a, #a78bfa, #7c3aed); }
 
+/* ---- Forge panel system: chunky beveled panels + 3D "press" buttons,
+   the Clash Royale/Fortnite-battle-pass game-UI language, reskinned with
+   Forge's own molten-metal/blacksmith palette instead of a literal
+   wood-and-kingdom theme. A thick two-tone border reads as a forged metal
+   frame; the inset highlight/shadow pair fakes a beveled, riveted edge. ---- */
+.forge-panel {
+  position: relative;
+  border-radius: 20px;
+  border: 3px solid rgb(120 72 30 / 0.55);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 40%), rgb(var(--surface));
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 0.07),
+    inset 0 -3px 0 rgb(0 0 0 / 0.35),
+    0 8px 20px -10px rgb(0 0 0 / 0.55);
+}
+.light .forge-panel {
+  border-color: rgb(217 119 6 / 0.35);
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 0.5),
+    inset 0 -3px 0 rgb(0 0 0 / 0.06),
+    0 8px 20px -12px rgb(0 0 0 / 0.25);
+}
+/* "Hot" variant — an ember gradient bleeding up from the base, for the
+   panels that represent your live progress (level card, current chest). */
+.forge-panel-hot {
+  border-color: rgb(255 106 26 / 0.6);
+  background:
+    radial-gradient(120% 80% at 50% 120%, rgb(255 106 26 / 0.18), transparent 60%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.04), transparent 40%),
+    rgb(var(--surface));
+}
+
+/* Color variants for .forge-panel — declared after it, same specificity, so
+   these win on border/background instead of silently fighting a Tailwind
+   bg- or border- utility class placed alongside .forge-panel (same property,
+   same specificity, whichever comes later in the stylesheet wins — that's
+   these, on purpose). */
+.forge-accent-emerald { border-color: rgb(4 120 87 / 0.55); background: linear-gradient(180deg, rgb(4 120 87 / 0.14), transparent 55%), rgb(var(--surface)); }
+.forge-accent-sky { border-color: rgb(2 132 199 / 0.55); background: linear-gradient(180deg, rgb(2 132 199 / 0.14), transparent 55%), rgb(var(--surface)); }
+.forge-accent-violet { border-color: rgb(109 40 217 / 0.55); background: linear-gradient(180deg, rgb(109 40 217 / 0.14), transparent 55%), rgb(var(--surface)); }
+.forge-accent-amber { border-color: rgb(180 83 9 / 0.55); background: linear-gradient(180deg, rgb(180 83 9 / 0.14), transparent 55%), rgb(var(--surface)); }
+.forge-accent-rose { border-color: rgb(190 18 60 / 0.55); background: linear-gradient(180deg, rgb(190 18 60 / 0.14), transparent 55%), rgb(var(--surface)); }
+.forge-accent-fuchsia { border-color: rgb(162 28 175 / 0.55); background: linear-gradient(180deg, rgb(162 28 175 / 0.14), transparent 55%), rgb(var(--surface)); }
+
+/* A raised button with a solid "side" that compresses flat on tap — the
+   single most recognizable mobile-game button feel. Pair with a
+   --press-shadow custom property to match the button's own color; falls
+   back to a plain dark edge. */
+.press-3d {
+  position: relative;
+  box-shadow: 0 4px 0 0 var(--press-shadow, rgb(0 0 0 / 0.4));
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.press-3d:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 0 var(--press-shadow, rgb(0 0 0 / 0.4));
+}
+
+@keyframes ember-drift {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-140px) translateX(var(--drift, 12px)); opacity: 0; }
+}
+.ember-particle {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffcf8a, #ff6a1a 70%);
+  animation: ember-drift linear infinite;
+  pointer-events: none;
+}
+
+@keyframes beacon-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50%      { transform: scale(1.6); opacity: 0; }
+}
+.beacon-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: beacon-pulse 1.8s ease-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fade-in-up,
   .celebrate-pop,
@@ -214,10 +297,15 @@ body {
   .flame-flicker,
   .count-tick,
   .chest-shake,
-  .shop-ring::before {
+  .shop-ring::before,
+  .ember-particle,
+  .beacon-pulse {
     animation: none !important;
   }
   .press:active {
+    transform: none;
+  }
+  .press-3d:active {
     transform: none;
   }
   .game-card:hover,
