@@ -18,6 +18,7 @@ import NotificationOptIn from "@/components/NotificationOptIn";
 import InstallPrompt from "@/components/InstallPrompt";
 import SubmitButton from "@/components/SubmitButton";
 import AnimatedNumber from "@/components/AnimatedNumber";
+import StepTracker from "@/components/StepTracker";
 import type { Profile } from "@/lib/types";
 
 // The home hub — a lean "at a glance" status screen (level, build, streak)
@@ -55,7 +56,7 @@ export default async function Dashboard() {
 
   // Independent of each other and of the profile fetch above — run together
   // instead of one-at-a-time round trips.
-  const [friendRowsRes, nextAchievement] = await Promise.all([
+  const [friendRowsRes, nextAchievement, stepLogRes] = await Promise.all([
     supabase
       .from("friendships")
       .select("user_id, friend_id")
@@ -68,7 +69,14 @@ export default async function Dashboard() {
       hasNewPR: false,
       muscleGroupVariety: profile.trained_muscle_groups?.length ?? 0,
     }),
+    supabase
+      .from("step_logs")
+      .select("steps, goal, goal_met")
+      .eq("user_id", user.id)
+      .eq("log_date", todayStr)
+      .maybeSingle(),
   ]);
+  const todaysSteps = stepLogRes.data;
 
   // Rare Chests drop every 5 levels — how close is the next one.
   const nextChestLevel = (Math.floor(progress.level / 5) + 1) * 5;
@@ -194,6 +202,14 @@ export default async function Dashboard() {
             label="Share progress"
           />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <StepTracker
+          initialSteps={todaysSteps?.steps ?? 0}
+          initialGoal={todaysSteps?.goal ?? profile.step_goal}
+          initialGoalMet={todaysSteps?.goal_met ?? false}
+        />
       </div>
 
       <NextRewardTeaser levelsToNextChest={levelsToNextChest} nextAchievement={nextAchievement} />
