@@ -118,23 +118,9 @@ body {
 .light .ambient-glow::before,
 .light .ambient-glow::after { opacity: 0.5; }
 
-/* A moving highlight sweeping across XP/progress bars so they read as
-   "charging" rather than a static rectangle. */
-@keyframes bar-shimmer {
-  0%   { transform: translateX(-120%); }
-  100% { transform: translateX(220%); }
-}
 .xp-bar {
   position: relative;
   overflow: hidden;
-}
-.xp-bar::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
-  animation: bar-shimmer 2.6s ease-in-out infinite;
 }
 
 /* A soft breathing glow for the "hero" card on the dashboard — reads as
@@ -306,7 +292,6 @@ body {
   .confetti-piece,
   .ambient-glow::before,
   .ambient-glow::after,
-  .xp-bar::after,
   .glow-pulse,
   .flame-flicker,
   .count-tick,
