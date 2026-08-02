@@ -247,6 +247,8 @@ export async function logWorkout(input: {
   await commonChestPromise;
 
   revalidatePath("/dashboard");
+  revalidatePath("/quests");
+  revalidatePath("/world");
   revalidatePath("/achievements");
   revalidatePath("/profile");
   revalidatePath("/chests");

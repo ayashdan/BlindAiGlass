@@ -25,6 +25,7 @@ export async function updateAvatar(formData: FormData) {
 
   revalidatePath("/profile");
   revalidatePath("/dashboard");
+  revalidatePath("/welcome");
   revalidatePath("/leaderboard");
 }
 

@@ -66,7 +66,7 @@ export async function signUp(formData: FormData) {
     redirect("/signup?error=" + encodeURIComponent(error.message));
   }
 
-  redirect("/dashboard");
+  redirect("/welcome");
 }
 
 export async function signIn(formData: FormData) {

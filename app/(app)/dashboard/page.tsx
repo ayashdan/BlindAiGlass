@@ -3,14 +3,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { levelProgress, rankForLevel } from "@/lib/game/leveling";
 import { isAdminEmail } from "@/lib/admin";
-import { ensureTodayQuests, ensureScheduledQuest } from "@/lib/game/quests-server";
-import { completeQuest, chooseSplit } from "@/app/(app)/quests/actions";
-import { scheduledQuestLabel } from "@/lib/game/quests";
-import { localDayKey, localDateStr } from "@/lib/local-day";
+import { localDateStr } from "@/lib/local-day";
 import { logRestDay } from "@/app/(app)/recovery/actions";
 import { dailyMotivation } from "@/lib/game/motivation";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
-import { getSeasonStatus } from "@/lib/game/season-server";
 import { getNextAchievementProgress } from "@/lib/game/achievements-server";
 import NextRewardTeaser from "@/components/NextRewardTeaser";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -23,9 +19,9 @@ import SubmitButton from "@/components/SubmitButton";
 import AnimatedNumber from "@/components/AnimatedNumber";
 import type { Profile } from "@/lib/types";
 
-// The logged-in home hub. Shows your character build, level/XP/rank,
-// quests, season progress, and a rival to chase, plus the main action:
-// log a workout.
+// The home hub — a lean "at a glance" status screen (level, build, streak)
+// plus doors into the focused screens (Quest Log, World Map, Chests, Shop,
+// Achievements, History) rather than one giant page with everything on it.
 export default async function Dashboard() {
   const supabase = createClient();
   const {
@@ -56,22 +52,9 @@ export default async function Dashboard() {
   const todayStr = localDateStr();
   const motivation = dailyMotivation(`${user.id}:${todayStr}`);
 
-  // If today's a scheduled training day (from the recurring weekly plan on
-  // the profile page), lock in a matching quest automatically instead of
-  // asking — a scheduled rest day just skips the question, no auto quest.
-  const todayDayKey = localDayKey();
-  const todaysSchedule = profile.weekly_split_schedule?.[todayDayKey];
-  const scheduledGroups = Array.isArray(todaysSchedule) ? todaysSchedule : null;
-  const scheduledRestToday = todaysSchedule === "rest";
-  if (scheduledGroups && scheduledGroups.length > 0) {
-    await ensureScheduledQuest(user.id, scheduledGroups);
-  }
-
   // Independent of each other and of the profile fetch above — run together
   // instead of one-at-a-time round trips.
-  const [quests, season, friendRowsRes, nextAchievement] = await Promise.all([
-    ensureTodayQuests(user.id),
-    getSeasonStatus(user.id),
+  const [friendRowsRes, nextAchievement] = await Promise.all([
     supabase
       .from("friendships")
       .select("user_id, friend_id")
@@ -125,14 +108,8 @@ export default async function Dashboard() {
   }
 
   const canLogRest = profile.last_workout_date !== todayStr && profile.last_rest_date !== todayStr;
-  const splitChosenToday = profile.split_choice_date === todayStr ? profile.split_choice : null;
   const totalChests =
     (profile.chests_common ?? 0) + (profile.chests_rare ?? 0) + (profile.chests_legendary ?? 0);
-  const SPLIT_LABELS: Record<string, string> = {
-    push_day: "💪 Push Day",
-    pull_day: "🏋️ Pull Day",
-    leg_day: "🦵 Leg Day",
-  };
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
@@ -310,178 +287,28 @@ export default async function Dashboard() {
         </p>
       )}
 
-      {/* Season pass */}
-      {season && (
-        <section
-          className="fade-in-up game-card mt-4 rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-5"
-          style={{ animationDelay: "0.13s" }}
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-black uppercase tracking-wide text-fuchsia-400">
-              🎖️ Season {season.seasonNumber}
-            </p>
-            <p className="text-xs text-muted">{season.daysLeft} days left</p>
-          </div>
-          <div className="flex gap-2">
-            {season.tiers.map((t) => (
-              <div key={t.tier} className="flex-1 text-center">
-                <div
-                  className={
-                    "h-2 rounded-full " + (t.done ? "bg-fuchsia-500" : "bg-surface2")
-                  }
-                />
-                <p className="mt-1 text-[10px] text-muted">{t.workouts}</p>
-              </div>
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-muted">
-            {season.workoutsThisSeason} workouts this season
-          </p>
-        </section>
-      )}
-
-      {/* Achievements + history — Leaderboard/Friends/Profile live in the
-          bottom tab bar now, no need to repeat them here. */}
-      <div
-        className="fade-in-up mt-4 grid grid-cols-2 gap-3"
-        style={{ animationDelay: "0.15s" }}
+      {/* Doors — everywhere else in Forge */}
+      <p
+        className="fade-in-up mb-2 mt-6 text-xs font-black uppercase tracking-wide text-muted"
+        style={{ animationDelay: "0.13s" }}
       >
-        <Link
-          href="/achievements"
-          className="game-card flex items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/5 px-4 py-4 transition hover:border-amber-500/60"
-        >
-          <span className="font-bold">🏅 Achievements</span>
-        </Link>
-        <Link
-          href="/history"
-          className="game-card flex items-center justify-between rounded-2xl border border-sky-500/30 bg-sky-500/5 px-4 py-4 transition hover:border-sky-500/60"
-        >
-          <span className="font-bold">📜 History</span>
-        </Link>
-      </div>
-
-      {/* Chests + Shop */}
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <Link
+        Where to next
+      </p>
+      <div className="grid grid-cols-3 gap-3">
+        <Door href="/quests" icon="📜" label="Quest Log" accent="emerald" delay={0.14} />
+        <Door href="/world" icon="🗺️" label="World Map" accent="fuchsia" delay={0.15} />
+        <Door href="/achievements" icon="🏅" label="Achievements" accent="amber" delay={0.16} />
+        <Door href="/history" icon="📖" label="History" accent="sky" delay={0.17} />
+        <Door
           href="/chests"
-          className={
-            "fade-in-up game-card relative flex flex-col items-center justify-center rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface px-4 py-4 text-center transition hover:border-amber-500/60" +
-            (totalChests > 0 ? " glow-pulse" : "")
-          }
-          style={{ animationDelay: "0.17s" }}
-        >
-          {totalChests > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-forge px-1.5 text-xs font-black text-neutral-950">
-              {totalChests}
-            </span>
-          )}
-          <span className="text-2xl">📦</span>
-          <span className="mt-1 font-bold">Chests</span>
-        </Link>
-        <Link
-          href="/shop"
-          className="fade-in-up game-card flex flex-col items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/10 via-surface to-surface px-4 py-4 text-center transition hover:border-fuchsia-500/60"
-          style={{ animationDelay: "0.18s" }}
-        >
-          <span className="text-2xl">🛒</span>
-          <span className="mt-1 font-bold">Shop</span>
-        </Link>
+          icon="📦"
+          label="Chests"
+          accent="amber"
+          delay={0.18}
+          badge={totalChests > 0 ? totalChests : undefined}
+        />
+        <Door href="/shop" icon="🛒" label="Shop" accent="fuchsia" delay={0.19} />
       </div>
-
-      {/* Choose today's split */}
-      <section
-        className="fade-in-up game-card mt-4 rounded-2xl border border-line bg-surface p-5"
-        style={{ animationDelay: "0.19s" }}
-      >
-        {scheduledGroups && scheduledGroups.length > 0 ? (
-          <p className="text-sm">
-            <span className="font-black uppercase tracking-wide text-muted">
-              Today (scheduled):{" "}
-            </span>
-            <span className="font-bold">📅 {scheduledQuestLabel(scheduledGroups)}</span>
-          </p>
-        ) : scheduledRestToday ? (
-          <p className="text-sm">
-            <span className="font-black uppercase tracking-wide text-muted">
-              Today (scheduled):{" "}
-            </span>
-            <span className="font-bold">😴 Rest Day</span>
-          </p>
-        ) : splitChosenToday ? (
-          <p className="text-sm">
-            <span className="font-black uppercase tracking-wide text-muted">Today: </span>
-            <span className="font-bold">{SPLIT_LABELS[splitChosenToday] ?? splitChosenToday}</span>
-          </p>
-        ) : (
-          <>
-            <p className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
-              What are you training today?
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {(["push_day", "pull_day", "leg_day"] as const).map((key) => (
-                <form key={key} action={chooseSplit}>
-                  <input type="hidden" name="split" value={key} />
-                  <SubmitButton className="press w-full rounded-lg border border-line bg-bg py-2.5 text-sm font-bold text-fg transition hover:border-forge/50">
-                    {SPLIT_LABELS[key]}
-                  </SubmitButton>
-                </form>
-              ))}
-            </div>
-            <p className="mt-2 text-xs text-muted">
-              Locks in a matching quest instead of a random one. Set a
-              recurring plan from your profile to skip this every day.
-            </p>
-          </>
-        )}
-      </section>
-
-      {/* Today's quests */}
-      {quests.length > 0 && (
-        <section
-          className="fade-in-up game-card mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5"
-          style={{ animationDelay: "0.2s" }}
-        >
-          <p className="mb-3 text-sm font-black uppercase tracking-wide text-emerald-400">
-            🎯 Today's missions
-          </p>
-          <div className="space-y-2">
-            {quests.map((q) => (
-              <div
-                key={q.key}
-                className={
-                  "flex items-center gap-3 rounded-lg border px-3 py-2 transition " +
-                  (q.completed
-                    ? "border-forge/40 bg-forge/5"
-                    : "border-line bg-bg")
-                }
-              >
-                <span className="text-xl">{q.completed ? "✅" : q.icon}</span>
-                <div className="flex-1">
-                  <p
-                    className={
-                      "text-sm font-bold " +
-                      (q.completed ? "text-muted line-through" : "")
-                    }
-                  >
-                    {q.title}
-                  </p>
-                  <p className="text-xs text-muted">{q.description}</p>
-                </div>
-                {q.kind === "manual" && !q.completed ? (
-                  <form action={completeQuest}>
-                    <input type="hidden" name="key" value={q.key} />
-                    <SubmitButton className="press rounded-lg border border-forge/40 px-2 py-1 text-xs font-bold text-forge transition hover:bg-forge/10">
-                      Mark done
-                    </SubmitButton>
-                  </form>
-                ) : (
-                  <span className="text-xs font-semibold text-forge">+{q.xpReward} XP</span>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
     </main>
   );
 }
@@ -492,7 +319,40 @@ const ACCENTS = {
   emerald: "border-emerald-500/30 bg-emerald-500/5",
   amber: "border-amber-500/30 bg-amber-500/5",
   rose: "border-rose-500/30 bg-rose-500/5",
+  fuchsia: "border-fuchsia-500/30 bg-fuchsia-500/5",
 } as const;
+
+function Door({
+  href,
+  icon,
+  label,
+  accent,
+  delay,
+  badge,
+}: {
+  href: string;
+  icon: string;
+  label: string;
+  accent: keyof typeof ACCENTS;
+  delay: number;
+  badge?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`fade-in-up game-card relative flex flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-4 text-center transition hover:brightness-110 ${ACCENTS[accent]}`}
+      style={{ animationDelay: `${delay}s` }}
+    >
+      {badge !== undefined && (
+        <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-forge px-1.5 text-xs font-black text-neutral-950">
+          {badge}
+        </span>
+      )}
+      <span className="text-2xl">{icon}</span>
+      <span className="text-xs font-bold">{label}</span>
+    </Link>
+  );
+}
 
 function Stat({
   label,

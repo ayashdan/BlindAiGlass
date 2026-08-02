@@ -32,7 +32,11 @@ export async function inviteFromWaitlist(formData: FormData) {
 
   const host = headers().get("host");
   const protocol = host?.startsWith("localhost") ? "http" : "https";
-  const redirectTo = host ? `${protocol}://${host}/auth/callback?next=/dashboard` : undefined;
+  const base = host ? `${protocol}://${host}/auth/callback` : undefined;
+  // A brand new invite gets the character-creation moment; someone who
+  // already has an account (the fallback below) skips straight to the app.
+  const redirectTo = base ? `${base}?next=/welcome` : undefined;
+  const returningRedirectTo = base ? `${base}?next=/dashboard` : undefined;
 
   const { error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { username: deriveUsername(name, email) },
@@ -47,7 +51,9 @@ export async function inviteFromWaitlist(formData: FormData) {
     // gets them straight into the app, no password needed.
     const alreadyHasAccount = /already registered|already exists/i.test(error.message);
     if (alreadyHasAccount) {
-      const { error: linkError } = await admin.auth.resetPasswordForEmail(email, { redirectTo });
+      const { error: linkError } = await admin.auth.resetPasswordForEmail(email, {
+        redirectTo: returningRedirectTo,
+      });
       if (linkError) {
         redirect(
           "/admin/waitlist?error=" +

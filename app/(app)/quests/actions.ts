@@ -6,7 +6,7 @@ import { completeManualQuest, chooseSplit as chooseSplitServer } from "@/lib/gam
 import { applyXp } from "@/lib/game/xp-server";
 
 // Self-reported quests (stretch, hydrate, sleep, steps) can't be verified
-// from workout data — this is what "Mark done" on the dashboard calls.
+// from workout data — this is what "Mark done" on the Quest Log calls.
 export async function completeQuest(formData: FormData) {
   const supabase = createClient();
   const {
@@ -19,6 +19,7 @@ export async function completeQuest(formData: FormData) {
   if (result.xpAwarded > 0) {
     await applyXp(user.id, result.xpAwarded);
   }
+  revalidatePath("/quests");
   revalidatePath("/dashboard");
 }
 
@@ -33,5 +34,6 @@ export async function chooseSplit(formData: FormData) {
 
   const split = String(formData.get("split") || "");
   await chooseSplitServer(user.id, split);
+  revalidatePath("/quests");
   revalidatePath("/dashboard");
 }
