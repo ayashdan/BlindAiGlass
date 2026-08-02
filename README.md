@@ -599,3 +599,59 @@ everyone:
    pre-launch when you're done testing.
 7. Try visiting `/admin` while logged in as a non-admin (or logged out) —
    confirm you're redirected to `/login`.
+
+### Feedback, analytics, and email sequences
+
+Run this migration in Supabase SQL Editor (adds the `feedback` table + the
+email-sequence tracking columns on `profiles`):
+
+```sql
+create table feedback (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  category text not null default 'other' check (category in ('bug', 'idea', 'other')),
+  message text not null check (char_length(message) between 1 and 2000),
+  status text not null default 'new' check (status in ('new', 'reviewed')),
+  created_at timestamptz not null default now()
+);
+
+alter table feedback enable row level security;
+
+create policy "Users can submit their own feedback"
+  on feedback for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can view their own feedback"
+  on feedback for select
+  using (auth.uid() = user_id);
+
+create index feedback_created_at_idx on feedback (created_at desc);
+
+alter table profiles
+  add column welcome_email_sent_at timestamptz,
+  add column inactivity_email_sent_at timestamptz,
+  add column education_email_step integer not null default 0,
+  add column education_email_sent_at timestamptz;
+```
+
+- **Feedback** — 💬 button on `/profile` opens `/feedback` (category + a
+  message box), reviewable at `/admin/feedback`.
+- **Analytics** — `/admin/analytics`: signups/workouts/waitlist joins over
+  the last 30 days, rank distribution, workout difficulty breakdown, chest
+  inventory totals. Separate from the quick stat grid already on `/admin`.
+- **Email sequences** — welcome email on signup, a "we miss you" email once
+  someone's gone 7 days without a workout (resets the moment they log a new
+  one), and a short feature-education drip (Chests → World Map → Friends,
+  day 2 then every 4 days after). Needs a free
+  **[Resend](https://resend.com)** account:
+  1. Sign up (free, no card — 3,000 emails/month).
+  2. **API Keys** → create one → copy it.
+  3. Add `RESEND_API_KEY` to `.env.local` and to Vercel → **Settings →
+     Environment Variables**, then redeploy.
+  4. Without a verified sending domain on Resend, you can only send to the
+     email address you signed up to Resend with — fine for testing the
+     pipeline, but **verify a domain on Resend before this can reach real
+     users**, and update `EMAIL_FROM` to an address on that domain.
+  - The inactivity + education emails run once daily via
+    `/api/cron/email-sequences` (see `vercel.json`) — same `CRON_SECRET`
+    setup as the push-notification crons above.

@@ -3,8 +3,10 @@ import { requireAdmin } from "@/lib/admin";
 
 const TABS = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/waitlist", label: "Waitlist" },
+  { href: "/admin/feedback", label: "Feedback" },
   { href: "/admin/achievements", label: "Achievements" },
   { href: "/admin/settings", label: "Settings" },
 ];

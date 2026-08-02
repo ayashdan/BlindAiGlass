@@ -424,6 +424,14 @@ export default async function ProfilePage({
           </SubmitButton>
         </form>
 
+        <Link
+          href="/feedback"
+          className="mt-4 flex items-center justify-between rounded-lg border border-line px-4 py-2.5 text-sm font-bold text-fg transition hover:border-forge/50"
+        >
+          💬 Send feedback
+          <span className="text-muted">→</span>
+        </Link>
+
         <form action={signOut} className="mt-4 border-t border-line pt-4">
           <SubmitButton
             pendingText="Logging out…"

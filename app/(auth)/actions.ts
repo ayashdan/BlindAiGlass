@@ -3,8 +3,11 @@
 // Server-side auth actions. Running on the server means passwords and the
 // sign-up flow never depend on anything the browser can tamper with.
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
+import { sendEmail } from "@/lib/email-server";
+import { welcomeEmail } from "@/lib/emails";
 
 export async function signUp(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
@@ -57,13 +60,29 @@ export async function signUp(formData: FormData) {
 
   // Create the account. The username rides along in `data` and our database
   // trigger uses it to create the matching profile row automatically.
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { username } },
   });
   if (error) {
     redirect("/signup?error=" + encodeURIComponent(error.message));
+  }
+
+  // Best-effort welcome email — never blocks or breaks signup if it fails
+  // or isn't configured (see lib/email-server.ts).
+  if (data.user) {
+    const host = headers().get("host") ?? "";
+    const proto = host.startsWith("localhost") ? "http" : "https";
+    const appUrl = `${proto}://${host}`;
+    const { subject, html } = welcomeEmail(username, appUrl);
+    const result = await sendEmail(email, subject, html);
+    if (result.sent) {
+      await supabase
+        .from("profiles")
+        .update({ welcome_email_sent_at: new Date().toISOString() })
+        .eq("id", data.user.id);
+    }
   }
 
   redirect("/welcome");

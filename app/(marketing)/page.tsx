@@ -2,6 +2,7 @@ import Link from "next/link";
 import { joinWaitlist } from "./actions";
 import ThemeToggle from "@/components/ThemeToggle";
 import SubmitButton from "@/components/SubmitButton";
+import PhoneMockup from "@/components/PhoneMockup";
 
 // Public landing + waitlist signup. (A referral link "?ref=CODE" pre-fills the
 // hidden ref field so the inviter gets credit.)
@@ -29,21 +30,9 @@ export default function Home({
         keeps you coming back.
       </p>
 
-      {/* A little mockup of the in-app reward, no image needed */}
-      <div className="mx-auto mt-10 max-w-sm rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6">
-        <div className="flex items-baseline justify-between">
-          <span className="font-bold">Level 7</span>
-          <span className="rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
-            Bronze
-          </span>
-        </div>
-        <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-surface2">
-          <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-forge to-amber-400" />
-        </div>
-        <div className="mt-4 flex justify-between text-sm text-muted">
-          <span className="text-sky-400">🔥 12 day streak</span>
-          <span className="font-semibold text-forge">+150 XP</span>
-        </div>
+      {/* A little mockup of the app itself, no screenshot needed */}
+      <div className="mt-10">
+        <PhoneMockup />
       </div>
 
       {/* Waitlist signup */}
