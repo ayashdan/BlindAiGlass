@@ -5,7 +5,9 @@
 // goal you set yourself (a higher goal is harder but pays out more XP —
 // see lib/game/steps.ts). No auto-sync from Apple Health or Android's
 // Health Connect — neither exposes a web API a PWA can reach, so this is
-// "tell us today's running total" instead.
+// manual entry — but additive, like logging another workout: each submit
+// adds to today's total instead of replacing it, so checking in throughout
+// the day never loses progress or re-triggers the goal reward.
 import { useState } from "react";
 import Link from "next/link";
 import { logStepsAction, setStepGoalAction } from "@/app/(app)/dashboard/step-actions";
@@ -32,7 +34,7 @@ export default function StepTracker({
   const [steps, setSteps] = useState(safeInitialSteps);
   const [goal, setGoal] = useState(safeInitialGoal);
   const [goalMet, setGoalMet] = useState(initialGoalMet);
-  const [input, setInput] = useState(safeInitialSteps > 0 ? String(safeInitialSteps) : "");
+  const [input, setInput] = useState("");
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(String(safeInitialGoal));
   const [busy, setBusy] = useState(false);
@@ -50,8 +52,8 @@ export default function StepTracker({
     e.preventDefault();
     setError(null);
     const n = parseInt(input, 10);
-    if (!Number.isFinite(n) || n < 0) {
-      setError("Enter a valid step count.");
+    if (!Number.isFinite(n) || n <= 0) {
+      setError("Enter how many steps to add.");
       return;
     }
     setBusy(true);
@@ -64,6 +66,7 @@ export default function StepTracker({
       setSteps(res.steps);
       setGoal(res.goal);
       setGoalMet(res.goalMet);
+      setInput("");
       if (res.newlyMet) {
         vibrate([20, 40, 60]);
         setReward({ xp: res.xpEarned, chest: res.chestEarned });
@@ -189,11 +192,11 @@ export default function StepTracker({
           <input
             type="number"
             inputMode="numeric"
-            min={0}
+            min={1}
             max={200000}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Today's step count"
+            placeholder="Add steps, e.g. 500"
             className="flex-1 rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-forge"
           />
           <button
@@ -202,7 +205,7 @@ export default function StepTracker({
             className="press-3d rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-neutral-950 transition hover:bg-emerald-400 disabled:opacity-70"
             style={{ "--press-shadow": "rgb(4 120 87 / 0.5)" } as React.CSSProperties}
           >
-            {busy ? "…" : "Update"}
+            {busy ? "…" : "Add"}
           </button>
         </form>
       </div>

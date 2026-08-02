@@ -1,10 +1,12 @@
 // Server-only: today's step count, goal, and the reward for hitting it.
-// Manual entry (see 0026_step_tracking.sql for why there's no auto-sync),
-// so logging just means "tell us today's running total" — each call
-// overwrites rather than adds, since that's what a Health/Fit app widget
-// shows you. The day's target locks in once you hit it, so raising your
-// goal later the same day can't retroactively "unmet" an already-earned
-// reward, but can still raise the bar for a day you haven't hit yet.
+// Manual entry (see 0026_step_tracking.sql for why there's no auto-sync).
+// Each call ADDS to today's running total rather than replacing it — you
+// log however many more steps you've done since the last entry, the same
+// way logging a second workout doesn't erase the first. The day's target
+// locks in once you hit it, so raising your goal later the same day can't
+// retroactively "unmet" an already-earned reward, but can still raise the
+// bar for a day you haven't hit yet, and logging more steps after the goal
+// is met never re-awards the XP/chest — it just keeps the count accurate.
 import { createClient } from "@/lib/supabase/server";
 import { applyXp } from "./xp-server";
 import { awardChest } from "./chests-server";
@@ -60,11 +62,11 @@ export type StepResult =
       chestEarned: boolean;
     };
 
-export async function logSteps(userId: string, steps: number): Promise<StepResult> {
-  if (!Number.isFinite(steps) || steps < 0 || steps > 200000) {
-    return { ok: false, error: "Enter a step count between 0 and 200,000." };
+export async function logSteps(userId: string, stepsToAdd: number): Promise<StepResult> {
+  if (!Number.isFinite(stepsToAdd) || stepsToAdd <= 0 || stepsToAdd > 200000) {
+    return { ok: false, error: "Enter how many steps to add (1-200,000)." };
   }
-  steps = Math.round(steps);
+  stepsToAdd = Math.round(stepsToAdd);
 
   const supabase = createClient();
   const todayStr = localDateStr();
@@ -73,23 +75,25 @@ export async function logSteps(userId: string, steps: number): Promise<StepResul
     supabase.from("profiles").select("step_goal").eq("id", userId).single(),
     supabase
       .from("step_logs")
-      .select("goal, goal_met, xp_awarded, chest_awarded")
+      .select("steps, goal, goal_met")
       .eq("user_id", userId)
       .eq("log_date", todayStr)
       .maybeSingle(),
   ]);
   const currentGoal = (profile as any)?.step_goal ?? 6000;
+  const newSteps = Math.min(200000, (existing?.steps ?? 0) + stepsToAdd);
 
-  // Already met today — target and reward stay locked, just refresh the count.
+  // Already met today — target and reward stay locked, just keep the count
+  // accurate as more steps come in. Never re-awards.
   if (existing?.goal_met) {
     await supabase
       .from("step_logs")
-      .update({ steps, updated_at: new Date().toISOString() })
+      .update({ steps: newSteps, updated_at: new Date().toISOString() })
       .eq("user_id", userId)
       .eq("log_date", todayStr);
     return {
       ok: true,
-      steps,
+      steps: newSteps,
       goal: existing.goal,
       goalMet: true,
       newlyMet: false,
@@ -102,14 +106,14 @@ export async function logSteps(userId: string, steps: number): Promise<StepResul
     };
   }
 
-  const newlyMet = steps >= currentGoal;
+  const newlyMet = newSteps >= currentGoal;
   const xpEarned = newlyMet ? stepGoalXp(currentGoal) : 0;
 
   await supabase.from("step_logs").upsert(
     {
       user_id: userId,
       log_date: todayStr,
-      steps,
+      steps: newSteps,
       goal: currentGoal,
       goal_met: newlyMet,
       xp_awarded: newlyMet ? xpEarned : 0,
@@ -122,7 +126,7 @@ export async function logSteps(userId: string, steps: number): Promise<StepResul
   if (!newlyMet) {
     return {
       ok: true,
-      steps,
+      steps: newSteps,
       goal: currentGoal,
       goalMet: false,
       newlyMet: false,
@@ -139,7 +143,7 @@ export async function logSteps(userId: string, steps: number): Promise<StepResul
 
   return {
     ok: true,
-    steps,
+    steps: newSteps,
     goal: currentGoal,
     goalMet: true,
     newlyMet: true,
