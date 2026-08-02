@@ -143,6 +143,14 @@ export default async function Dashboard() {
           <NotificationOptIn />
           <SoundToggle />
           <ThemeToggle />
+          <Link
+            href="/feedback"
+            aria-label="Send feedback"
+            title="Send feedback"
+            className="press rounded-lg border border-line bg-surface px-3 py-2 text-sm transition hover:border-forge/50"
+          >
+            💬
+          </Link>
           {isAdminEmail(user.email) && (
             <Link
               href="/admin"
