@@ -34,7 +34,6 @@ export type Profile = {
   chests_common: number;
   chests_rare: number;
   chests_legendary: number;
-  step_goal: number;
 };
 
 // An achievement the user just unlocked.
