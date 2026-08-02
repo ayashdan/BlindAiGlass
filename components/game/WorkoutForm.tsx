@@ -21,10 +21,13 @@ const STAT_ICONS: Record<string, string> = {
   discipline: "🧠",
 };
 
+// Same underlying "easy"/"medium"/"hard" values the server expects (that
+// logic doesn't change) — just labeled to match Forge's own fire theme
+// instead of a bland difficulty dropdown.
 const DIFFICULTIES = [
-  { key: "easy", label: "Easy" },
-  { key: "medium", label: "Medium" },
-  { key: "hard", label: "Hard" },
+  { key: "easy", label: "Embers", icon: "🔥" },
+  { key: "medium", label: "Flames", icon: "🔥🔥" },
+  { key: "hard", label: "Inferno", icon: "🔥🔥🔥" },
 ];
 
 export default function WorkoutForm({
@@ -382,7 +385,7 @@ export default function WorkoutForm({
       {/* Difficulty */}
       <div className="game-card rounded-2xl border border-line bg-surface p-4">
         <label className="mb-2 block text-sm font-semibold text-fg">
-          Difficulty
+          How hard did you push it?
         </label>
         <div className="grid grid-cols-3 gap-2">
           {DIFFICULTIES.map((d) => (
@@ -392,12 +395,13 @@ export default function WorkoutForm({
               onClick={() => setDifficulty(d.key)}
               aria-pressed={difficulty === d.key}
               className={
-                "rounded-lg border py-3 text-sm font-bold transition " +
+                "flex flex-col items-center gap-1 rounded-lg border py-3 text-sm font-bold transition " +
                 (difficulty === d.key
                   ? "border-forge bg-forge/15 text-forge"
                   : "border-line bg-bg text-fg hover:border-forge/50")
               }
             >
+              <span className="text-base leading-none">{d.icon}</span>
               {d.label}
             </button>
           ))}
@@ -421,9 +425,15 @@ export default function WorkoutForm({
       <button
         type="submit"
         disabled={busy}
-        className="press glow-pulse w-full rounded-lg bg-forge py-4 text-lg font-black text-neutral-950 transition hover:bg-forge-soft disabled:opacity-50"
+        className="press glow-pulse flex w-full items-center justify-center gap-2 rounded-lg bg-forge py-4 text-lg font-black text-neutral-950 transition hover:bg-forge-soft disabled:opacity-70"
       >
-        {busy ? "Saving…" : "⚔️ Complete workout"}
+        {busy ? (
+          <>
+            <span className="flame-flicker">🔨</span> Forging your progress…
+          </>
+        ) : (
+          "⚔️ Complete workout"
+        )}
       </button>
     </form>
   );

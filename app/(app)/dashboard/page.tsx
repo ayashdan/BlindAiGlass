@@ -13,6 +13,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import SoundToggle from "@/components/SoundToggle";
 import ShareButton from "@/components/ShareButton";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import ClassEmblem from "@/components/ClassEmblem";
 import NotificationOptIn from "@/components/NotificationOptIn";
 import InstallPrompt from "@/components/InstallPrompt";
 import SubmitButton from "@/components/SubmitButton";
@@ -115,12 +116,15 @@ export default async function Dashboard() {
     <main className="mx-auto max-w-lg px-6 py-12">
       <header className="mb-8 flex items-center justify-between">
         <Link href="/profile" className="flex items-center gap-3">
-          <AvatarDisplay
-            avatarUrl={profile.avatar_url}
-            avatar={profile.avatar}
-            borderClass={profile.equipped_border}
-            size={44}
-          />
+          <div className="relative flex h-[68px] w-[68px] items-center justify-center">
+            <ClassEmblem charClass={charClass} size={68} />
+            <AvatarDisplay
+              avatarUrl={profile.avatar_url}
+              avatar={profile.avatar}
+              borderClass={profile.equipped_border}
+              size={44}
+            />
+          </div>
           <div>
             <p className="text-sm text-muted">
               {classInfo.icon} {charClass}

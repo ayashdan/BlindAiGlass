@@ -12,4 +12,7 @@ export const SEASON_TIERS: SeasonTier[] = [
   { tier: 4, workouts: 50, xpReward: 250 },
 ];
 
-export const SEASON_LENGTH_DAYS = 28;
+// Roughly two months — long enough to be a real chunk of a training block,
+// short enough that "this season" still means something. The admin starts
+// each new one manually from /admin/settings; nothing here auto-rotates.
+export const SEASON_LENGTH_DAYS = 60;

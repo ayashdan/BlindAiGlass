@@ -3,7 +3,7 @@
 // workout-count tiers a user has claimed this season, and reports display
 // status for the dashboard.
 import { createClient } from "@/lib/supabase/server";
-import { SEASON_TIERS } from "./season";
+import { SEASON_TIERS, SEASON_LENGTH_DAYS } from "./season";
 import type { SeasonTierReached } from "@/lib/types";
 
 async function getSeasonConfig(supabase: ReturnType<typeof createClient>) {
@@ -88,7 +88,7 @@ export async function getSeasonStatus(userId: string): Promise<SeasonStatus | nu
 
   const startedMs = new Date(seasonStartedAt).getTime();
   const daysElapsed = Math.floor((Date.now() - startedMs) / 86400000);
-  const daysLeft = Math.max(0, 28 - daysElapsed);
+  const daysLeft = Math.max(0, SEASON_LENGTH_DAYS - daysElapsed);
 
   return {
     seasonNumber,

@@ -15,6 +15,7 @@ import {
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
 import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import ClassEmblem from "@/components/ClassEmblem";
 import ShareButton from "@/components/ShareButton";
 import SubmitButton from "@/components/SubmitButton";
 import WeeklySplitEditor from "@/components/WeeklySplitEditor";
@@ -84,7 +85,8 @@ export default async function ProfilePage({
 
       {/* Identity card */}
       <section className="fade-in-up glow-pulse mt-3 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6 text-center">
-        <div className="flex justify-center">
+        <div className="relative mx-auto flex h-[130px] w-[130px] items-center justify-center">
+          <ClassEmblem charClass={charClass} size={130} />
           <AvatarDisplay
             avatarUrl={profile.avatar_url}
             avatar={profile.avatar}
