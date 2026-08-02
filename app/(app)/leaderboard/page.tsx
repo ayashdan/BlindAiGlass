@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AvatarDisplay from "@/components/AvatarDisplay";
+import TabScreenHeader from "@/components/TabScreenHeader";
 
 const PAGE_SIZE = 50;
 
@@ -56,13 +57,11 @@ export default async function LeaderboardPage({
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
-      <Link href="/dashboard" className="text-sm text-muted hover:text-fg">
-        ← Back
-      </Link>
-      <h1 className="mb-1 mt-3 text-2xl font-black tracking-tight">Leaderboard</h1>
-      <p className="mb-6 text-sm text-muted">
-        Top Forgers, ranked by {by === "xp" ? "XP" : "streak"}.
-      </p>
+      <TabScreenHeader
+        icon="🏆"
+        title="Leaderboard"
+        subtitle={`Top Forgers, ranked by ${by === "xp" ? "XP" : "streak"}.`}
+      />
 
       <div className="mb-4 flex gap-2">
         <Link

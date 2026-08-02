@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import SubmitButton from "@/components/SubmitButton";
+import TabScreenHeader from "@/components/TabScreenHeader";
 import { sendFriendRequest, acceptFriendRequest, removeFriend } from "./actions";
 
 // A small-group leaderboard: competing against people you actually know
@@ -44,11 +44,7 @@ export default async function FriendsPage() {
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
-      <Link href="/dashboard" className="text-sm text-muted hover:text-fg">
-        ← Back
-      </Link>
-      <h1 className="mb-1 mt-3 text-2xl font-black tracking-tight">Friends</h1>
-      <p className="mb-6 text-sm text-muted">Compete with people you actually know.</p>
+      <TabScreenHeader icon="🤝" title="Friends" subtitle="Compete with people you actually know." />
 
       <form action={sendFriendRequest} className="mb-6 flex gap-2">
         <input

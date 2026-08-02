@@ -1,64 +1,121 @@
 "use client";
 
-// Clash-Royale-style paging: swipe left/right anywhere on one of the five
-// main screens to move to the next/previous tab, and slide the incoming
-// page in from the direction it "arrived" from — whether you got there by
-// swiping or by tapping the bottom nav. Pages outside the five main tabs
-// (World Map, Chests, Shop, etc.) aren't part of the carousel and just
-// appear normally.
+// Clash-Royale-style paging: drag horizontally on one of the five main
+// screens and the page follows your finger in real time (no CSS animation
+// delay — a direct transform on every touchmove). Release past the
+// threshold and the screen finishes sliding off in that direction while
+// the next tab slides in from the opposite edge; release short of it and
+// it springs back to center. Tapping the bottom nav plays the same
+// slide-in on arrival, so both ways of navigating feel like one motion
+// language instead of two different mechanisms bolted together.
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { TAB_ORDER } from "@/lib/tabs";
 
-const SWIPE_THRESHOLD_PX = 60;
-const MAX_OFF_AXIS_RATIO = 0.6;
+const COMMIT_PX = 64;
+const AXIS_LOCK_PX = 8;
+const EDGE_RESISTANCE = 0.35;
+const EXIT_MS = 190;
+const SPRING_MS = 220;
 
 export default function SwipeNav({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const tabIndex = TAB_ORDER.findIndex((t) => t.href === pathname);
 
-  const prevIndexRef = useRef(tabIndex);
-  const [direction, setDirection] = useState<"left" | "right" | null>(null);
+  // Prefetch neighbors so the swipe-triggered navigation lands instantly —
+  // otherwise there'd be a visible stall between the outgoing exit and the
+  // incoming entrance, breaking the illusion of one continuous motion.
+  useEffect(() => {
+    if (tabIndex === -1) return;
+    if (tabIndex > 0) router.prefetch(TAB_ORDER[tabIndex - 1].href);
+    if (tabIndex < TAB_ORDER.length - 1) router.prefetch(TAB_ORDER[tabIndex + 1].href);
+  }, [tabIndex, router]);
 
+  const prevIndexRef = useRef(tabIndex);
+  const [enterDirection, setEnterDirection] = useState<"left" | "right" | null>(null);
   useEffect(() => {
     const prev = prevIndexRef.current;
-    setDirection(tabIndex !== -1 && prev !== -1 && tabIndex !== prev ? (tabIndex > prev ? "left" : "right") : null);
+    setEnterDirection(
+      tabIndex !== -1 && prev !== -1 && tabIndex !== prev ? (tabIndex > prev ? "left" : "right") : null
+    );
     prevIndexRef.current = tabIndex;
   }, [pathname, tabIndex]);
 
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const gesture = useRef<{ startX: number; startY: number; axis: "x" | "y" | null; x: number } | null>(null);
 
-  function onTouchStart(e: React.TouchEvent) {
-    if (e.touches.length !== 1) return;
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  function drag(x: number) {
+    const el = trackRef.current;
+    if (!el) return;
+    el.style.transition = "none";
+    el.style.transform = `translateX(${x}px)`;
   }
 
-  function onTouchEnd(e: React.TouchEvent) {
-    const start = touchStart.current;
-    touchStart.current = null;
-    if (!start || tabIndex === -1) return;
+  function spring() {
+    const el = trackRef.current;
+    if (!el) return;
+    el.style.transition = `transform ${SPRING_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
+    el.style.transform = "";
+  }
 
-    const end = e.changedTouches[0];
-    const dx = end.clientX - start.x;
-    const dy = end.clientY - start.y;
+  function exit(direction: -1 | 1) {
+    const el = trackRef.current;
+    if (!el) return;
+    const dist = direction * (typeof window !== "undefined" ? window.innerWidth : 400);
+    el.style.transition = `transform ${EXIT_MS}ms ease-in, opacity ${EXIT_MS}ms ease-in`;
+    el.style.transform = `translateX(${dist}px)`;
+    el.style.opacity = "0";
+  }
 
-    if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
-    if (Math.abs(dy) > Math.abs(dx) * MAX_OFF_AXIS_RATIO) return; // mostly vertical — a scroll, not a swipe
+  function onTouchStart(e: React.TouchEvent) {
+    if (e.touches.length !== 1 || tabIndex === -1) return;
+    gesture.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, axis: null, x: 0 };
+  }
 
-    if (dx < 0 && tabIndex < TAB_ORDER.length - 1) {
-      router.push(TAB_ORDER[tabIndex + 1].href);
-    } else if (dx > 0 && tabIndex > 0) {
-      router.push(TAB_ORDER[tabIndex - 1].href);
+  function onTouchMove(e: React.TouchEvent) {
+    const g = gesture.current;
+    if (!g) return;
+    const dx = e.touches[0].clientX - g.startX;
+    const dy = e.touches[0].clientY - g.startY;
+
+    if (g.axis === null) {
+      if (Math.abs(dx) < AXIS_LOCK_PX && Math.abs(dy) < AXIS_LOCK_PX) return;
+      g.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
     }
+    if (g.axis !== "x") return;
+
+    const hasNext = tabIndex < TAB_ORDER.length - 1;
+    const hasPrev = tabIndex > 0;
+    const x = (dx < 0 && !hasNext) || (dx > 0 && !hasPrev) ? dx * EDGE_RESISTANCE : dx;
+    g.x = x;
+    drag(x);
+  }
+
+  function onTouchEnd() {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g || g.axis !== "x") return;
+
+    const goNext = g.x < 0 && tabIndex < TAB_ORDER.length - 1;
+    const goPrev = g.x > 0 && tabIndex > 0;
+
+    if (Math.abs(g.x) < COMMIT_PX || !(goNext || goPrev)) {
+      spring();
+      return;
+    }
+
+    exit(goNext ? -1 : 1);
+    const nextHref = goNext ? TAB_ORDER[tabIndex + 1].href : TAB_ORDER[tabIndex - 1].href;
+    window.setTimeout(() => router.push(nextHref), EXIT_MS);
   }
 
   const animClass =
-    direction === "left" ? "page-slide-in-left" : direction === "right" ? "page-slide-in-right" : "";
+    enterDirection === "left" ? "page-slide-in-left" : enterDirection === "right" ? "page-slide-in-right" : "";
 
   return (
-    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      <div key={pathname} className={animClass}>
+    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+      <div ref={trackRef} key={pathname} className={animClass} style={{ touchAction: "pan-y" }}>
         {children}
       </div>
     </div>

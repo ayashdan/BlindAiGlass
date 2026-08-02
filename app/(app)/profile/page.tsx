@@ -79,12 +79,8 @@ export default async function ProfilePage({
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
-      <Link href="/dashboard" className="text-sm text-muted hover:text-fg">
-        ← Back
-      </Link>
-
       {/* Identity card */}
-      <section className="fade-in-up glow-pulse mt-3 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-surface to-surface p-6 text-center">
+      <section className="fade-in-up forge-panel forge-panel-hot glow-pulse p-6 text-center">
         <div className="relative mx-auto flex h-[130px] w-[130px] items-center justify-center">
           <ClassEmblem charClass={charClass} size={130} />
           <AvatarDisplay
