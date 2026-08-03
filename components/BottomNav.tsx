@@ -21,16 +21,18 @@ export default function BottomNav() {
         {TAB_ORDER.map((tab) => {
           const active = pathname === tab.href || pathname?.startsWith(tab.href + "/");
 
+          const Icon = tab.icon;
+
           if (tab.primary) {
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
                 aria-label="Log a workout"
-                className="press-3d -mt-6 flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-forge to-rose-500 text-2xl text-neutral-950 transition hover:from-forge-soft hover:to-rose-400"
+                className="press-3d -mt-6 flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-forge to-rose-500 text-neutral-950 transition hover:from-forge-soft hover:to-rose-400"
                 style={{ "--press-shadow": "rgb(154 40 10 / 0.65)" } as React.CSSProperties}
               >
-                {tab.icon}
+                <Icon width={24} height={24} strokeWidth={2.5} />
               </Link>
             );
           }
@@ -40,14 +42,12 @@ export default function BottomNav() {
               key={tab.href}
               href={tab.href}
               className={
-                "flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[10px] font-bold transition " +
+                "flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 transition " +
                 (active ? "bg-forge/10 text-forge" : "text-muted hover:text-fg")
               }
             >
-              <span className={"text-lg leading-none " + (active ? "" : "opacity-70")}>
-                {tab.icon}
-              </span>
-              {tab.label}
+              <Icon width={20} height={20} className={active ? "" : "opacity-70"} />
+              <span className="font-display text-[11px] font-semibold tracking-wide">{tab.label}</span>
               {active && <span className="mt-0.5 h-1 w-1 rounded-full bg-forge" />}
             </Link>
           );

@@ -30,6 +30,15 @@ body {
   @apply bg-bg text-fg antialiased transition-colors duration-300;
 }
 
+/* Every page title in the app is an <h1> — one rule here gives all of them
+   the bold condensed display face instead of touching every page. Body
+   copy stays on the default sans for readability; use the `font-display`
+   utility (Tailwind auto-generates it from tailwind.config.ts) for other
+   headline-ish spots like big stat numbers or nav labels. */
+h1 {
+  font-family: var(--font-display), sans-serif;
+}
+
 /* ---- Phase 7: shared motion ---- */
 
 @keyframes fade-in-up {

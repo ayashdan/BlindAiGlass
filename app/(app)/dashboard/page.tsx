@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ComponentType, SVGProps } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { levelProgress, rankForLevel } from "@/lib/game/leveling";
@@ -8,6 +9,7 @@ import { logRestDay } from "@/app/(app)/recovery/actions";
 import { dailyMotivation } from "@/lib/game/motivation";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
 import { getNextAchievementProgress } from "@/lib/game/achievements-server";
+import { ensureTodayQuests } from "@/lib/game/quests-server";
 import NextRewardTeaser from "@/components/NextRewardTeaser";
 import ThemeToggle from "@/components/ThemeToggle";
 import SoundToggle from "@/components/SoundToggle";
@@ -18,6 +20,14 @@ import NotificationOptIn from "@/components/NotificationOptIn";
 import InstallPrompt from "@/components/InstallPrompt";
 import SubmitButton from "@/components/SubmitButton";
 import AnimatedNumber from "@/components/AnimatedNumber";
+import {
+  ScrollIcon,
+  MapPinIcon,
+  MedalIcon,
+  BookIcon,
+  ChestIcon,
+  CartIcon,
+} from "@/components/icons/GameIcons";
 import type { Profile } from "@/lib/types";
 
 // The home hub — a lean "at a glance" status screen (level, build, streak)
@@ -55,7 +65,7 @@ export default async function Dashboard() {
 
   // Independent of each other and of the profile fetch above — run together
   // instead of one-at-a-time round trips.
-  const [friendRowsRes, nextAchievement] = await Promise.all([
+  const [friendRowsRes, nextAchievement, quests] = await Promise.all([
     supabase
       .from("friendships")
       .select("user_id, friend_id")
@@ -68,7 +78,9 @@ export default async function Dashboard() {
       hasNewPR: false,
       muscleGroupVariety: profile.trained_muscle_groups?.length ?? 0,
     }),
+    ensureTodayQuests(user.id),
   ]);
+  const questsCompleted = quests.filter((q) => q.completed).length;
 
   // Rare Chests drop every 5 levels — how close is the next one.
   const nextChestLevel = (Math.floor(progress.level / 5) + 1) * 5;
@@ -172,7 +184,11 @@ export default async function Dashboard() {
         <Link href="/world" className="block">
           <div className="mb-3 flex items-baseline justify-between">
             <span className="text-lg font-bold">
-              Level <AnimatedNumber value={progress.level} className="text-2xl font-black text-amber-300" />
+              Level{" "}
+              <AnimatedNumber
+                value={progress.level}
+                className="font-display text-3xl font-bold text-amber-300"
+              />
             </span>
             <span className="rounded-full bg-amber-500/15 px-3 py-1 text-sm font-semibold text-amber-400">
               {rank}
@@ -203,6 +219,27 @@ export default async function Dashboard() {
           />
         </div>
       </div>
+
+      {/* Today's quests — pulled up onto Home instead of only living behind
+          a door, so "what should I do today" doesn't require a detour. */}
+      {quests.length > 0 && (
+        <Link
+          href="/quests"
+          className="fade-in-up forge-panel forge-accent-emerald mt-4 flex items-center justify-between p-4 transition hover:brightness-110"
+          style={{ animationDelay: "0.02s" }}
+        >
+          <div className="flex items-center gap-3">
+            <ScrollIcon width={22} height={22} className="text-emerald-400" />
+            <div>
+              <p className="font-display text-base font-bold text-emerald-300">Today's Quests</p>
+              <p className="text-xs text-muted">
+                {questsCompleted} of {quests.length} complete
+              </p>
+            </div>
+          </div>
+          <span className="text-muted">→</span>
+        </Link>
+      )}
 
       <NextRewardTeaser levelsToNextChest={levelsToNextChest} nextAchievement={nextAchievement} />
 
@@ -310,19 +347,19 @@ export default async function Dashboard() {
         Where to next
       </p>
       <div className="grid grid-cols-3 gap-3">
-        <Door href="/quests" icon="📜" label="Quest Log" accent="emerald" delay={0.14} />
-        <Door href="/world" icon="🗺️" label="World Map" accent="fuchsia" delay={0.15} />
-        <Door href="/achievements" icon="🏅" label="Achievements" accent="amber" delay={0.16} />
-        <Door href="/history" icon="📖" label="History" accent="sky" delay={0.17} />
+        <Door href="/quests" icon={ScrollIcon} label="Quest Log" accent="emerald" delay={0.14} />
+        <Door href="/world" icon={MapPinIcon} label="World Map" accent="fuchsia" delay={0.15} />
+        <Door href="/achievements" icon={MedalIcon} label="Achievements" accent="amber" delay={0.16} />
+        <Door href="/history" icon={BookIcon} label="History" accent="sky" delay={0.17} />
         <Door
           href="/chests"
-          icon="📦"
+          icon={ChestIcon}
           label="Chests"
           accent="amber"
           delay={0.18}
           badge={totalChests > 0 ? totalChests : undefined}
         />
-        <Door href="/shop" icon="🛒" label="Shop" accent="fuchsia" delay={0.19} />
+        <Door href="/shop" icon={CartIcon} label="Shop" accent="fuchsia" delay={0.19} />
       </div>
     </main>
   );
@@ -348,14 +385,14 @@ const DOOR_GLOW: Record<keyof typeof ACCENTS, string> = {
 
 function Door({
   href,
-  icon,
+  icon: Icon,
   label,
   accent,
   delay,
   badge,
 }: {
   href: string;
-  icon: string;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
   label: string;
   accent: keyof typeof ACCENTS;
   delay: number;
@@ -364,7 +401,7 @@ function Door({
   return (
     <Link
       href={href}
-      className={`fade-in-up forge-panel press-3d forge-accent-${accent} relative flex flex-col items-center justify-center gap-1 px-2 py-4 text-center transition hover:brightness-110`}
+      className={`fade-in-up forge-panel press-3d forge-accent-${accent} relative flex flex-col items-center justify-center gap-1.5 px-2 py-4 text-center transition hover:brightness-110`}
       style={{ animationDelay: `${delay}s`, "--press-shadow": DOOR_GLOW[accent] } as React.CSSProperties}
     >
       {badge !== undefined && (
@@ -372,8 +409,8 @@ function Door({
           {badge}
         </span>
       )}
-      <span className="text-2xl">{icon}</span>
-      <span className="text-xs font-bold">{label}</span>
+      <Icon width={24} height={24} />
+      <span className="font-display text-xs font-semibold tracking-wide">{label}</span>
     </Link>
   );
 }
@@ -395,7 +432,7 @@ function Stat({
     <div
       className={`game-card rounded-xl border p-4 text-center ${accent ? ACCENTS[accent] : "border-line bg-surface"}`}
     >
-      <div className="text-xl font-black">
+      <div className="font-display text-2xl font-bold">
         <AnimatedNumber value={value} />
         {icon && <span className={flicker ? "flame-flicker ml-0.5" : "ml-0.5"}>{icon}</span>}
       </div>

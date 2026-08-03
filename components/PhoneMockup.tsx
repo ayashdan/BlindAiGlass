@@ -2,17 +2,21 @@
 // dashboard inside — no screenshot image needed (and none exists to embed
 // from this environment), just the same building blocks shrunk down:
 // avatar + class-emblem ring, the forge-panel-hot Level/XP card, the
-// streak/best/workouts stat row, the "Where to next" doors grid, and the
-// bottom nav. Staying in sync with the real layout (app/(app)/dashboard)
-// matters more than pixel-perfect fidelity — a static screenshot would go
-// stale the next time that page changes; this doesn't.
+// streak/best/workouts stat row, the "Where to next" doors grid (the real
+// icon set, not emoji), and the bottom nav. Staying in sync with the real
+// layout (app/(app)/dashboard) matters more than pixel-perfect fidelity —
+// a static screenshot would go stale the next time that page changes;
+// this doesn't.
+import { HomeIcon, TrophyIcon, DumbbellIcon, FriendsIcon, ProfileIcon } from "./icons/GameIcons";
+import { ScrollIcon, MapPinIcon, MedalIcon, BookIcon, ChestIcon, CartIcon } from "./icons/GameIcons";
+
 const DOORS = [
-  { icon: "📜", accent: "border-emerald-500/50 bg-emerald-500/10" },
-  { icon: "🗺️", accent: "border-fuchsia-500/50 bg-fuchsia-500/10" },
-  { icon: "🏅", accent: "border-amber-500/50 bg-amber-500/10" },
-  { icon: "📖", accent: "border-sky-500/50 bg-sky-500/10" },
-  { icon: "📦", accent: "border-amber-500/50 bg-amber-500/10" },
-  { icon: "🛒", accent: "border-fuchsia-500/50 bg-fuchsia-500/10" },
+  { Icon: ScrollIcon, accent: "border-emerald-500/50 bg-emerald-500/10" },
+  { Icon: MapPinIcon, accent: "border-fuchsia-500/50 bg-fuchsia-500/10" },
+  { Icon: MedalIcon, accent: "border-amber-500/50 bg-amber-500/10" },
+  { Icon: BookIcon, accent: "border-sky-500/50 bg-sky-500/10" },
+  { Icon: ChestIcon, accent: "border-amber-500/50 bg-amber-500/10" },
+  { Icon: CartIcon, accent: "border-fuchsia-500/50 bg-fuchsia-500/10" },
 ];
 
 export default function PhoneMockup() {
@@ -42,7 +46,7 @@ export default function PhoneMockup() {
                 <div className="relative h-4 w-4 rounded-full bg-neutral-800" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[8px] font-black text-white">ForgeUser</p>
+                <p className="font-display truncate text-[9px] font-bold text-white">ForgeUser</p>
                 <p className="text-[6px] font-semibold text-amber-400">🔥 Titan · Bronze</p>
               </div>
             </div>
@@ -57,7 +61,7 @@ export default function PhoneMockup() {
                 }}
               />
               <div className="relative flex items-baseline justify-between">
-                <span className="text-[9px] font-black text-white">Level 7</span>
+                <span className="font-display text-[11px] font-bold text-white">Level 7</span>
                 <span className="rounded-full bg-amber-500/20 px-1.5 py-[1px] text-[6px] font-bold text-amber-300">
                   Bronze
                 </span>
@@ -85,12 +89,9 @@ export default function PhoneMockup() {
             {/* Where to next — the doors grid */}
             <p className="mt-2 text-[5px] font-black uppercase tracking-wide text-white/40">Where to next</p>
             <div className="mt-1 grid grid-cols-3 gap-1">
-              {DOORS.map((d, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center justify-center rounded-md border py-2 text-[10px] ${d.accent}`}
-                >
-                  {d.icon}
+              {DOORS.map(({ Icon, accent }, i) => (
+                <div key={i} className={`flex items-center justify-center rounded-md border py-2 ${accent}`}>
+                  <Icon width={11} height={11} className="text-white/90" />
                 </div>
               ))}
             </div>
@@ -99,13 +100,13 @@ export default function PhoneMockup() {
 
             {/* Bottom nav */}
             <div className="flex items-center justify-between rounded-full bg-white/5 px-3 py-1.5">
-              <span className="text-[10px] opacity-90">🏠</span>
-              <span className="text-[10px] opacity-60">🏆</span>
-              <span className="-mt-3 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-forge to-rose-500 text-[9px]">
-                ➕
+              <HomeIcon width={11} height={11} className="text-white/90" />
+              <TrophyIcon width={11} height={11} className="text-white/50" />
+              <span className="-mt-3 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-forge to-rose-500">
+                <DumbbellIcon width={11} height={11} className="text-neutral-950" />
               </span>
-              <span className="text-[10px] opacity-60">🤝</span>
-              <span className="text-[10px] opacity-60">👤</span>
+              <FriendsIcon width={11} height={11} className="text-white/50" />
+              <ProfileIcon width={11} height={11} className="text-white/50" />
             </div>
           </div>
         </div>

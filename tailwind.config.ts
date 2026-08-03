@@ -4,6 +4,12 @@ const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        // Bold/condensed — headlines, big numbers, nav labels, buttons.
+        // Falls back to the default sans if the variable isn't set yet
+        // (e.g. a component rendered outside the root layout in tests).
+        display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       colors: {
         // Forge's accent: a molten orange, used for XP, buttons, highlights.
         forge: {
