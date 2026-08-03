@@ -32,7 +32,7 @@ export default async function ChestsPage() {
       </Link>
       <h1 className="mb-1 mt-3 text-2xl font-black tracking-tight">Chests</h1>
       <p className="mb-6 text-sm text-muted">
-        Common drops every workout you log. Rare drops every 5 levels. Legendary is shop-only.
+        Common drops every workout you log. Rare drops every 5 levels. Legendary is a rare prize from special events.
         Every reward's range is shown up front — no blind luck.
       </p>
 

@@ -41,7 +41,7 @@ export const CHEST_DEFS: Record<ChestTier, ChestDef> = {
     name: "Legendary Chest",
     icon: "👑",
     color: "amber",
-    blurb: "150-300 XP, always includes a streak freeze. Shop only.",
+    blurb: "150-300 XP, always includes a streak freeze. A rare prize from special events.",
     xpRange: [150, 300],
     freezeChance: 1,
     guaranteedFreeze: true,

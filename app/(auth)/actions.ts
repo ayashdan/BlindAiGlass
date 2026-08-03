@@ -5,6 +5,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 import { sendEmail } from "@/lib/email-server";
 import { welcomeEmail } from "@/lib/emails";
@@ -13,6 +14,7 @@ export async function signUp(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
   const username = String(formData.get("username") || "").trim();
+  const ref = String(formData.get("ref") || "").trim();
 
   // Basic validation.
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
@@ -67,6 +69,33 @@ export async function signUp(formData: FormData) {
   });
   if (error) {
     redirect("/signup?error=" + encodeURIComponent(error.message));
+  }
+
+  // Invite loop: arriving via a friend's ?ref link auto-friends the two, so
+  // day one already has a rival and a weekly league. Service-role client
+  // because the new session may not exist yet (email confirmation on) and
+  // the friendship is written on the inviter's behalf. Best-effort — a bad
+  // ref never breaks signup.
+  if (data.user && ref && ref.toLowerCase() !== username.toLowerCase()) {
+    try {
+      const admin = createAdminClient();
+      const { data: inviter } = await admin
+        .from("profiles")
+        .select("id")
+        .ilike("username", ref)
+        .maybeSingle();
+      if (inviter && inviter.id !== data.user.id) {
+        await admin
+          .from("profiles")
+          .update({ referred_by: inviter.id })
+          .eq("id", data.user.id);
+        await admin
+          .from("friendships")
+          .insert({ user_id: inviter.id, friend_id: data.user.id, status: "accepted" });
+      }
+    } catch {
+      // Missing service key or a race — the invitee can still add manually.
+    }
   }
 
   // Best-effort welcome email — never blocks or breaks signup if it fails

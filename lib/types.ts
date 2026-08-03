@@ -34,6 +34,14 @@ export type Profile = {
   chests_common: number;
   chests_rare: number;
   chests_legendary: number;
+  // Weekly friends league (see lib/game/league.ts): XP scored this week and
+  // the Monday (UTC) it belongs to. Read via effectiveWeeklyXp(), never raw.
+  weekly_xp: number;
+  week_start: string | null;
+  // Invite loop: who recruited this user, and how many of their own recruits
+  // have logged a 3rd workout (unlocks the Recruiter cosmetic).
+  referred_by: string | null;
+  recruit_count: number;
 };
 
 // An achievement the user just unlocked.

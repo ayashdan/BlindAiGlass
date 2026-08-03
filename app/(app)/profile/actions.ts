@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AVATARS } from "@/lib/game/avatars";
 import { MAX_LEVEL } from "@/lib/game/leveling";
-import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
+import { ACHIEVEMENT_COSMETICS, RECRUITER_TITLE } from "@/lib/game/cosmetics";
 import { WEEKLY_SPLIT_DISPLAY_ORDER } from "@/lib/game/quests";
 import { VALID_MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
 
@@ -116,6 +116,11 @@ export async function equipCosmetic(formData: FormData) {
 
   const { data: catalog } = await supabase.from("achievements").select("id, key");
   const { data: mine } = await supabase.from("user_achievements").select("achievement_id");
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("recruit_count")
+    .eq("id", user.id)
+    .single();
   const have = new Set((mine ?? []).map((r: any) => r.achievement_id));
   const unlockedKeys = new Set(
     (catalog ?? []).filter((a: any) => have.has(a.id)).map((a: any) => a.key as string)
@@ -131,6 +136,8 @@ export async function equipCosmetic(formData: FormData) {
       .map((k) => ACHIEVEMENT_COSMETICS[k]?.title)
       .filter((t): t is string => Boolean(t))
   );
+  // The one non-achievement cosmetic: earned by the invite loop.
+  if ((prof?.recruit_count ?? 0) > 0) unlockedTitles.add(RECRUITER_TITLE);
 
   const update: Record<string, string | null> = {};
   if (typeof border === "string") {

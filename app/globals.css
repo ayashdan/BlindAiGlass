@@ -23,7 +23,9 @@
   --surface-2: 244 244 245;
   --line: 228 228 231;
   --fg: 23 23 23;
-  --muted: 113 113 122;
+  /* Darker than dark-mode's muted grey: on white, zinc-500 (113) sat right
+     at the WCAG AA edge for small text — zinc-600 clears it comfortably. */
+  --muted: 82 82 91;
 }
 
 body {

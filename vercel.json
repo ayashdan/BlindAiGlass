@@ -1,5 +1,6 @@
 {
   "crons": [
+    { "path": "/api/cron/league-finish", "schedule": "5 0 * * 1" },
     { "path": "/api/cron/reward-reminder", "schedule": "0 12 * * *" },
     { "path": "/api/cron/reward-reminder", "schedule": "0 20 * * *" },
     { "path": "/api/cron/workout-reminder", "schedule": "0 0 * * *" },

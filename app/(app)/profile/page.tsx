@@ -13,11 +13,15 @@ import {
   changePassword,
 } from "./actions";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
-import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
+import { ACHIEVEMENT_COSMETICS, RECRUITER_TITLE } from "@/lib/game/cosmetics";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import ShareButton from "@/components/ShareButton";
 import SubmitButton from "@/components/SubmitButton";
 import WeeklySplitEditor from "@/components/WeeklySplitEditor";
+import InstallPrompt from "@/components/InstallPrompt";
+import NotificationOptIn from "@/components/NotificationOptIn";
+import SoundToggle from "@/components/SoundToggle";
+import ThemeToggle from "@/components/ThemeToggle";
 import type { Profile } from "@/lib/types";
 
 // Identity hub: pick an avatar, see your stat card, show off unlocked
@@ -75,6 +79,11 @@ export default async function ProfilePage({
   const unlockedCosmetics = Array.from(unlockedKeys)
     .map((k) => ({ key: k, ...ACHIEVEMENT_COSMETICS[k] }))
     .filter((c) => c.border || c.title);
+  // The one non-achievement cosmetic: earned by recruiting a friend who
+  // sticks (3 workouts) — see the invite section on /friends.
+  if ((profile.recruit_count ?? 0) > 0) {
+    unlockedCosmetics.push({ key: "recruiter", title: RECRUITER_TITLE });
+  }
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
@@ -126,6 +135,11 @@ export default async function ProfilePage({
               profile.prestige > 0 ? ` (⭐×${profile.prestige} Prestige)` : ""
             }, ${profile.current_streak} day streak. 🔥`}
             label="Share profile"
+            imageUrl={`/api/share-card?u=${encodeURIComponent(profile.username)}&l=${
+              progress.level
+            }&r=${encodeURIComponent(rank)}&s=${profile.current_streak}&c=${encodeURIComponent(
+              `${classInfo.icon} ${charClass}`
+            )}&p=${profile.prestige}`}
           />
         </div>
 
@@ -316,10 +330,10 @@ export default async function ProfilePage({
         style={{ animationDelay: "0.1s" }}
       >
         <Stat label="Streak" value={`${profile.current_streak}🔥`} accent="sky" />
-        <Stat label="Best" value={`${profile.longest_streak}`} accent="violet" />
+        <Stat label="Best" value={`${profile.longest_streak}`} accent="amber" />
         <Stat label="Workouts" value={`${profile.total_workouts}`} accent="emerald" />
         <Stat label="Freezes" value={`${profile.streak_freezes}🧊`} accent="sky" />
-        <Stat label="Muscle groups" value={`${profile.trained_muscle_groups?.length ?? 0}`} accent="violet" />
+        <Stat label="Muscle groups" value={`${profile.trained_muscle_groups?.length ?? 0}`} accent="emerald" />
         <Stat
           label="Member since"
           value={new Date(profile.created_at).toLocaleDateString(undefined, {
@@ -376,6 +390,26 @@ export default async function ProfilePage({
           choosing it manually.
         </p>
         <WeeklySplitEditor initial={profile.weekly_split_schedule ?? {}} />
+      </section>
+
+      {/* Settings — the app/device toggles that used to crowd the dashboard
+          header. Identity stays up top; plumbing lives here. */}
+      <section
+        id="settings"
+        className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
+        style={{ animationDelay: "0.19s" }}
+      >
+        <p className="mb-3 text-sm font-black uppercase tracking-wide text-muted">Settings</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <InstallPrompt />
+          <NotificationOptIn />
+          <SoundToggle />
+          <ThemeToggle />
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          Install Forge to your home screen, turn on streak/league reminders,
+          and switch sound or theme.
+        </p>
       </section>
 
       {/* Account */}
@@ -445,7 +479,7 @@ export default async function ProfilePage({
 
 const ACCENTS = {
   sky: "border-sky-500/30 bg-sky-500/5",
-  violet: "border-violet-500/30 bg-violet-500/5",
+  amber: "border-amber-500/30 bg-amber-500/5",
   emerald: "border-emerald-500/30 bg-emerald-500/5",
 } as const;
 

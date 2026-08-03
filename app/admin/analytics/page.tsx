@@ -21,15 +21,18 @@ export default async function AdminAnalytics() {
   const admin = createAdminClient();
   const since = new Date(Date.now() - DAYS_BACK * 86400000).toISOString();
 
-  const [{ data: profiles }, { data: recentWorkouts }, { data: recentWaitlist }] = await Promise.all([
-    admin
-      .from("profiles")
-      .select(
-        "xp, level, current_streak, longest_streak, total_workouts, created_at, chests_common, chests_rare, chests_legendary"
-      ),
-    admin.from("workouts").select("created_at, difficulty").gte("created_at", since),
-    admin.from("waitlist").select("created_at").gte("created_at", since),
-  ]);
+  const [{ data: profiles }, { data: recentWorkouts }, { data: recentWaitlist }, plusInterestRes] =
+    await Promise.all([
+      admin
+        .from("profiles")
+        .select(
+          "xp, level, current_streak, longest_streak, total_workouts, created_at, chests_common, chests_rare, chests_legendary"
+        ),
+      admin.from("workouts").select("created_at, difficulty").gte("created_at", since),
+      admin.from("waitlist").select("created_at").gte("created_at", since),
+      admin.from("plus_interest").select("*", { count: "exact", head: true }),
+    ]);
+  const plusInterestCount = plusInterestRes.count ?? 0;
 
   const users = (profiles ?? []) as {
     xp: number;
@@ -136,6 +139,23 @@ export default async function AdminAnalytics() {
         <Stat label="Avg longest streak" value={`${avgLongestStreak}🔥`} />
         <Stat label="Unopened Common" value={`📦 ${chestTotals.common}`} />
         <Stat label="Unopened Rare" value={`💎 ${chestTotals.rare}`} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
+          Forge Plus demand
+        </h2>
+        <div className="grid grid-cols-2 gap-4">
+          <Stat
+            label="Notify-me signups"
+            value={`⭐ ${plusInterestCount}`}
+            sub={totalUsers ? `${Math.round((plusInterestCount / totalUsers) * 100)}% of users` : undefined}
+          />
+          <div className="rounded-xl border border-line bg-surface p-5 text-xs text-muted">
+            Users who tapped "Notify me when Plus launches" on /shop — a free
+            read on willingness to pay, before wiring any payment processor.
+          </div>
+        </div>
       </section>
     </div>
   );
