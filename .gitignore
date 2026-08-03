@@ -1,0 +1,10 @@
+node_modules
+package-lock.json
+.next
+out
+build
+.env*.local
+.vercel
+*.log
+.DS_Store
+next-env.d.ts
