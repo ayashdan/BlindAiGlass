@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { sendPushToUser } from "@/lib/push-server";
 
 export async function sendFriendRequest(formData: FormData) {
   const username = String(formData.get("username") || "").trim();
@@ -47,6 +48,43 @@ export async function acceptFriendRequest(formData: FormData) {
     .update({ status: "accepted" })
     .eq("id", id)
     .eq("friend_id", user.id);
+  revalidatePath("/friends");
+}
+
+// One-tap 🔥 on a friend's feed event. RLS enforces you can only hype a
+// friend's event, once (unique constraint) — a duplicate tap is a silent
+// no-op, which also means the push below can never be spammed.
+export async function hypeEvent(formData: FormData) {
+  const eventId = String(formData.get("eventId") || "");
+  if (!eventId) return;
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: inserted, error } = await supabase
+    .from("hypes")
+    .insert({ event_id: eventId, from_user: user.id })
+    .select("id")
+    .maybeSingle();
+
+  if (!error && inserted) {
+    // Recognition from a real person is the whole point — tell them.
+    const [{ data: ev }, { data: me }] = await Promise.all([
+      supabase.from("friend_events").select("user_id").eq("id", eventId).single(),
+      supabase.from("profiles").select("username").eq("id", user.id).single(),
+    ]);
+    if (ev) {
+      await sendPushToUser(ev.user_id, {
+        title: "🔥 Hyped!",
+        body: `${me?.username ?? "A friend"} hyped your workout.`,
+        url: "/friends",
+      });
+    }
+  }
+
   revalidatePath("/friends");
 }
 

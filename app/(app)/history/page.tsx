@@ -49,6 +49,15 @@ export default async function HistoryPage() {
         Your last {workouts.length} workout{workouts.length === 1 ? "" : "s"}.
       </p>
 
+      <Link
+        href="/insights"
+        className="fade-in-up mb-6 flex items-center justify-between rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 transition hover:brightness-110"
+      >
+        <span className="text-sm font-bold text-sky-300">
+          📊 Want trends and muscle-group balance instead of a list? See Insights →
+        </span>
+      </Link>
+
       <section className="fade-in-up mb-6 rounded-2xl border border-line bg-surface p-5">
         <p className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
           Last {HEATMAP_WEEKS} weeks

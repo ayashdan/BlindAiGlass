@@ -10,6 +10,9 @@ import { checkAndCompleteQuests } from "@/lib/game/quests-server";
 import { checkAndRecordPRs } from "@/lib/game/records-server";
 import { checkAndAwardSeasonTiers } from "@/lib/game/season-server";
 import { awardChest } from "@/lib/game/chests-server";
+import { currentWeekStart, effectiveWeeklyXp, LEAGUE_DAILY_WORKOUT_CAP } from "@/lib/game/league";
+import { sendPushToUser } from "@/lib/push-server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { VALID_MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
 import { localDateStr, addDaysToDateStr, localMidnightUtcIsoForToday } from "@/lib/local-day";
 import {
@@ -64,7 +67,7 @@ export async function logWorkout(input: {
   const { data: profData } = await supabase
     .from("profiles")
     .select(
-      "total_workouts, current_streak, longest_streak, last_workout_date, streak_freezes, trained_muscle_groups, stat_power, stat_grit, stat_endurance, stat_discipline, recovery_bonus_pct"
+      "total_workouts, current_streak, longest_streak, last_workout_date, streak_freezes, trained_muscle_groups, stat_power, stat_grit, stat_endurance, stat_discipline, recovery_bonus_pct, weekly_xp, week_start, referred_by, tier"
     )
     .eq("id", userId)
     .single();
@@ -93,7 +96,8 @@ export async function logWorkout(input: {
   // Kick it off now so its round trips overlap with everything else
   // instead of stacking on top at the end. Every logged workout also
   // drops a Common Chest — same reasoning, independent of everything else.
-  const seasonPromise = checkAndAwardSeasonTiers(userId);
+  const isPremium = prof?.tier === "premium";
+  const seasonPromise = checkAndAwardSeasonTiers(userId, isPremium);
   const commonChestPromise = awardChest(userId, "common", 1);
 
   const prevWorkouts = prof?.total_workouts ?? 0;
@@ -154,6 +158,16 @@ export async function logWorkout(input: {
     .eq("user_id", userId)
     .gte("created_at", todayStart);
   const rows = todaysWorkouts ?? [];
+
+  // ---- Weekly league score (see lib/game/league.ts): only base workout XP
+  // counts, and only the first few workouts per day — the score measures
+  // consistency, not volume, which also bounds what fabricated workouts can
+  // buy. `rows` already includes the workout inserted above.
+  const weekStart = currentWeekStart();
+  const weeklyBefore = effectiveWeeklyXp(prof ?? {});
+  const countsForLeague = rows.length <= LEAGUE_DAILY_WORKOUT_CAP;
+  const newWeeklyXp = countsForLeague ? weeklyBefore + xpEarned : weeklyBefore;
+
   const quest = await checkAndCompleteQuests(userId, {
     workoutsToday: rows.length,
     muscleGroupsToday: rows.flatMap((r: any) => (r.muscle_groups as string[]) ?? []),
@@ -197,6 +211,8 @@ export async function logWorkout(input: {
       stat_endurance: newStats.endurance,
       stat_discipline: newStats.discipline,
       recovery_bonus_pct: 0, // consumed, whether or not it was active
+      weekly_xp: newWeeklyXp,
+      week_start: weekStart,
     })
     .eq("id", userId);
 
@@ -246,12 +262,103 @@ export async function logWorkout(input: {
   }
   await commonChestPromise;
 
+  // ---- Hype feed: one event per logged workout, visible to accepted
+  // friends (RLS on friend_events). Highlights ride in the payload so the
+  // feed can show "leveled up" / "new PR" without extra queries.
+  await supabase.from("friend_events").insert({
+    user_id: userId,
+    kind: "workout",
+    payload: {
+      muscle_groups: muscleGroups,
+      custom_name: customName,
+      duration,
+      difficulty,
+      xp: xpEarned + streakBonus + bonusXp,
+      streak: newStreak,
+      leveled_up: leveledUp,
+      level,
+      achievements: ach.unlocked.map((a) => a.name),
+      prs: pr.newRecords.length,
+    },
+  });
+
+  // ---- League overtake push: any friend whose weekly score fell inside
+  // (before, after] just got passed by this workout. Capped to the closest
+  // few so a huge session can't spam a whole friends list.
+  if (countsForLeague && newWeeklyXp > weeklyBefore) {
+    try {
+      const { data: frRows } = await supabase
+        .from("friendships")
+        .select("user_id, friend_id")
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+        .eq("status", "accepted");
+      const friendIds = (frRows ?? []).map((r: any) =>
+        r.user_id === userId ? r.friend_id : r.user_id
+      );
+      if (friendIds.length > 0) {
+        const { data: friendProfiles } = await supabase
+          .from("profiles")
+          .select("id, username, weekly_xp, week_start")
+          .in("id", friendIds);
+        const { data: meRow } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", userId)
+          .single();
+        const passed = (friendProfiles ?? [])
+          .map((p: any) => ({ ...p, weekly: effectiveWeeklyXp(p) }))
+          .filter((p) => p.weekly > weeklyBefore && p.weekly <= newWeeklyXp)
+          .sort((a, b) => b.weekly - a.weekly)
+          .slice(0, 3);
+        for (const p of passed) {
+          await sendPushToUser(p.id, {
+            title: "⚔️ You've been passed!",
+            body: `${meRow?.username ?? "A rival"} just passed you in this week's league — ${
+              newWeeklyXp - p.weekly
+            } XP to take it back.`,
+            url: "/friends",
+          });
+        }
+      }
+    } catch {
+      // Push is best-effort — never let it break logging a workout.
+    }
+  }
+
+  // ---- Recruiter unlock: the 3rd workout is when a recruit "sticks."
+  // Credit whoever invited them (their row, so it needs the service-role
+  // client) and tell them their cosmetic is unlocked.
+  if (newWorkouts === 3 && prof?.referred_by) {
+    try {
+      const admin = createAdminClient();
+      const { data: inviter } = await admin
+        .from("profiles")
+        .select("id, recruit_count")
+        .eq("id", prof.referred_by)
+        .single();
+      if (inviter) {
+        await admin
+          .from("profiles")
+          .update({ recruit_count: (inviter.recruit_count ?? 0) + 1 })
+          .eq("id", inviter.id);
+        await sendPushToUser(inviter.id, {
+          title: "🎖️ Recruiter unlocked!",
+          body: "Someone you invited just logged their 3rd workout. Your Recruiter title is waiting on your profile.",
+          url: "/profile",
+        });
+      }
+    } catch {
+      // Best-effort — missing service key locally shouldn't break workouts.
+    }
+  }
+
   revalidatePath("/dashboard");
   revalidatePath("/quests");
   revalidatePath("/world");
   revalidatePath("/achievements");
   revalidatePath("/profile");
   revalidatePath("/chests");
+  revalidatePath("/friends");
   return {
     ok: true,
     xpEarned: xpEarned + streakBonus + bonusXp,
@@ -269,6 +376,7 @@ export async function logWorkout(input: {
     statGains,
     newClass,
     seasonTiersReached: season.reached,
+    plusSeasonTiersReached: season.plusReached,
     recoveryBonusApplied,
     chestsEarned,
   };

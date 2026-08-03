@@ -14,6 +14,11 @@ export const ACHIEVEMENT_COSMETICS: Record<string, { border?: string; title?: st
   well_rounded: { title: "Well Rounded", border: "border-cyan-400" },
 };
 
+// Unlocked by the invite loop, not an achievement: recruit someone who then
+// logs their 3rd workout (see profiles.recruit_count). Deliberately the only
+// reward for inviting — cosmetic, never XP, so the league stays clean.
+export const RECRUITER_TITLE = "Recruiter";
+
 // A handful of milestone achievements get a "boss fight" treatment in the
 // celebration overlay instead of a normal card.
 export const BOSS_ACHIEVEMENTS: Record<string, string> = {

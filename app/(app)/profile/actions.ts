@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AVATARS } from "@/lib/game/avatars";
 import { MAX_LEVEL } from "@/lib/game/leveling";
-import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
+import { getUnlockedCosmetics } from "@/lib/game/cosmetics-server";
 import { WEEKLY_SPLIT_DISPLAY_ORDER } from "@/lib/game/quests";
 import { VALID_MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
 
@@ -101,9 +101,11 @@ export async function prestige() {
   revalidatePath("/leaderboard");
 }
 
-// Equips a border or title — only ones unlocked via an earned achievement
-// are accepted (validated server-side against the user's actual unlocks,
-// not trusted from the form).
+// Equips a border or title — only ones the user has actually unlocked are
+// accepted (validated server-side via getUnlockedCosmetics, not trusted
+// from the form). Covers achievement cosmetics, the Recruiter title, Plus
+// vault items, and Plus season-track trophies — one shared source of truth
+// so this can never accept something the profile page didn't also show.
 export async function equipCosmetic(formData: FormData) {
   const border = formData.get("border");
   const title = formData.get("title");
@@ -114,23 +116,9 @@ export async function equipCosmetic(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  const { data: catalog } = await supabase.from("achievements").select("id, key");
-  const { data: mine } = await supabase.from("user_achievements").select("achievement_id");
-  const have = new Set((mine ?? []).map((r: any) => r.achievement_id));
-  const unlockedKeys = new Set(
-    (catalog ?? []).filter((a: any) => have.has(a.id)).map((a: any) => a.key as string)
-  );
-
-  const unlockedBorders = new Set(
-    Array.from(unlockedKeys)
-      .map((k) => ACHIEVEMENT_COSMETICS[k]?.border)
-      .filter((b): b is string => Boolean(b))
-  );
-  const unlockedTitles = new Set(
-    Array.from(unlockedKeys)
-      .map((k) => ACHIEVEMENT_COSMETICS[k]?.title)
-      .filter((t): t is string => Boolean(t))
-  );
+  const { borders, titles } = await getUnlockedCosmetics(user.id);
+  const unlockedBorders = new Set(borders.map((b) => b.key));
+  const unlockedTitles = new Set(titles.map((t) => t.key));
 
   const update: Record<string, string | null> = {};
   if (typeof border === "string") {

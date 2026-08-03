@@ -15,13 +15,19 @@ export default function AvatarDisplay({
   avatar?: string | null;
   size?: number;
   className?: string;
-  borderClass?: string | null; // an equipped cosmetic border, e.g. "border-amber-400"
+  // Either a plain achievement border, e.g. "border-amber-400", or a Plus
+  // vault ring, e.g. "shop-ring-inferno" — the animated conic-gradient
+  // rings defined in globals.css. The two render differently: a vault ring
+  // supplies its own padding/gradient layer via CSS, a plain border doesn't.
+  borderClass?: string | null;
 }) {
-  const ring = borderClass ? `${borderClass} border-[3px] rounded-full` : "";
+  const isVaultRing = Boolean(borderClass?.startsWith("shop-ring-"));
+  const ringClass = !borderClass ? "" : isVaultRing ? `shop-ring ${borderClass}` : `${borderClass} border-[3px] rounded-full`;
+  const wrapStyle = borderClass && !isVaultRing ? { padding: 2 } : undefined;
 
   if (avatarUrl) {
     return (
-      <span className={`inline-block ${ring}`} style={{ padding: borderClass ? 2 : 0 }}>
+      <span className={`inline-block ${ringClass}`} style={wrapStyle}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={avatarUrl}
@@ -34,7 +40,7 @@ export default function AvatarDisplay({
   }
   return (
     <span
-      className={`inline-flex items-center justify-center ${ring} ${className}`}
+      className={`inline-flex items-center justify-center ${ringClass} ${className}`}
       style={{
         fontSize: size * 0.75,
         lineHeight: 1,

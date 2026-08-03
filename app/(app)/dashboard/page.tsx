@@ -10,13 +10,10 @@ import { dailyMotivation } from "@/lib/game/motivation";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
 import { getNextAchievementProgress } from "@/lib/game/achievements-server";
 import { ensureTodayQuests } from "@/lib/game/quests-server";
+import { effectiveWeeklyXp } from "@/lib/game/league";
 import NextRewardTeaser from "@/components/NextRewardTeaser";
-import ThemeToggle from "@/components/ThemeToggle";
-import SoundToggle from "@/components/SoundToggle";
 import ShareButton from "@/components/ShareButton";
 import AvatarDisplay from "@/components/AvatarDisplay";
-import NotificationOptIn from "@/components/NotificationOptIn";
-import InstallPrompt from "@/components/InstallPrompt";
 import SubmitButton from "@/components/SubmitButton";
 import AnimatedNumber from "@/components/AnimatedNumber";
 import {
@@ -101,22 +98,29 @@ export default async function Dashboard() {
     characterStats.discipline
   );
 
-  // ---- Rival spotlight: the closest friend ahead of you in XP ----
+  // ---- Rival spotlight: the closest friend ahead of you in THIS WEEK's
+  // league (Monday reset — see lib/game/league.ts), so the gap is always
+  // closable, not a lifetime head start. ----
   const friendIds = (friendRowsRes.data ?? []).map((r: any) =>
     r.user_id === user.id ? r.friend_id : r.user_id
   );
+  const myWeekly = effectiveWeeklyXp(profile);
   let rival: any = null;
   let leadingFriends = false;
   if (friendIds.length > 0) {
     const { data: friendProfiles } = await supabase
       .from("profiles")
-      .select("username, xp, avatar, avatar_url")
+      .select("username, xp, avatar, avatar_url, weekly_xp, week_start")
       .in("id", friendIds);
-    const above = (friendProfiles ?? [])
-      .filter((p: any) => p.xp > profile.xp)
-      .sort((a: any, b: any) => a.xp - b.xp)[0];
+    const withWeekly = (friendProfiles ?? []).map((p: any) => ({
+      ...p,
+      weekly: effectiveWeeklyXp(p),
+    }));
+    const above = withWeekly
+      .filter((p) => p.weekly > myWeekly)
+      .sort((a, b) => a.weekly - b.weekly)[0];
     if (above) rival = above;
-    else if ((friendProfiles ?? []).length > 0) leadingFriends = true;
+    else if (withWeekly.length > 0) leadingFriends = true;
   }
 
   const canLogRest = profile.last_workout_date !== todayStr && profile.last_rest_date !== todayStr;
@@ -146,18 +150,16 @@ export default async function Dashboard() {
             </h1>
           </div>
         </Link>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <InstallPrompt />
-          <NotificationOptIn />
-          <SoundToggle />
-          <ThemeToggle />
+        {/* Identity + at most one contextual chip — the install/notification/
+            sound/theme toggles live under Settings on /profile now. */}
+        <div className="flex items-center justify-end gap-2">
           <Link
-            href="/feedback"
-            aria-label="Send feedback"
-            title="Send feedback"
+            href="/profile#settings"
+            aria-label="Settings"
+            title="Settings"
             className="press rounded-lg border border-line bg-surface px-3 py-2 text-sm transition hover:border-forge/50"
           >
-            💬
+            ⚙️
           </Link>
           {isAdminEmail(user.email) && (
             <Link
@@ -212,6 +214,11 @@ export default async function Dashboard() {
           <ShareButton
             text={`I just hit Level ${progress.level} (${rank}) on Forge! 🔥 ${profile.current_streak} day streak.`}
             label="Share progress"
+            imageUrl={`/api/share-card?u=${encodeURIComponent(profile.username)}&l=${
+              progress.level
+            }&r=${encodeURIComponent(rank)}&s=${profile.current_streak}&c=${encodeURIComponent(
+              `${classInfo.icon} ${charClass}`
+            )}&p=${profile.prestige}`}
           />
         </div>
       </div>
@@ -272,26 +279,32 @@ export default async function Dashboard() {
         </div>
       </section>
 
-      {/* Rival spotlight */}
+      {/* Rival spotlight — weekly gap, so it's always closable */}
       {rival && (
-        <div
-          className="fade-in-up mt-4 flex items-center gap-3 rounded-2xl border border-red-500/30 bg-red-500/5 p-4"
+        <Link
+          href="/friends"
+          className="fade-in-up mt-4 flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 transition hover:brightness-110"
           style={{ animationDelay: "0.06s" }}
         >
           <AvatarDisplay avatarUrl={rival.avatar_url} avatar={rival.avatar} size={32} />
           <p className="flex-1 text-sm">
-            <span className="font-bold text-red-400">Rival:</span> {rival.username} is{" "}
-            <span className="font-black">{rival.xp - profile.xp} XP</span> ahead. Catch up!
+            <span className="font-bold text-rose-400">Rival:</span> {rival.username} is{" "}
+            <span className="font-black">
+              {(rival.weekly - myWeekly).toLocaleString()} XP
+            </span>{" "}
+            ahead <span className="font-semibold">this week</span> — one hard workout
+            closes it.
           </p>
-        </div>
+        </Link>
       )}
       {leadingFriends && (
-        <p
-          className="fade-in-up mt-4 text-center text-sm text-emerald-400"
+        <Link
+          href="/friends"
+          className="fade-in-up mt-4 block text-center text-sm text-emerald-400 hover:underline"
           style={{ animationDelay: "0.06s" }}
         >
-          👑 You're leading your friends' leaderboard. Defend it.
-        </p>
+          👑 You lead this week's league. Defend it.
+        </Link>
       )}
 
       {/* Main action */}
@@ -325,7 +338,7 @@ export default async function Dashboard() {
         style={{ animationDelay: "0.1s" }}
       >
         <Stat label="Streak" value={profile.current_streak} icon="🔥" flicker accent="sky" />
-        <Stat label="Best" value={profile.longest_streak} accent="violet" />
+        <Stat label="Best" value={profile.longest_streak} accent="amber" />
         <Stat label="Workouts" value={profile.total_workouts} accent="emerald" />
       </section>
       {profile.streak_freezes > 0 && (
@@ -344,7 +357,7 @@ export default async function Dashboard() {
       </p>
       <div className="grid grid-cols-3 gap-3">
         <Door href="/quests" icon={ScrollIcon} label="Quest Log" accent="emerald" delay={0.14} />
-        <Door href="/world" icon={MapPinIcon} label="World Map" accent="fuchsia" delay={0.15} />
+        <Door href="/world" icon={MapPinIcon} label="World Map" accent="amber" delay={0.15} />
         <Door href="/achievements" icon={MedalIcon} label="Achievements" accent="amber" delay={0.16} />
         <Door href="/history" icon={BookIcon} label="History" accent="sky" delay={0.17} />
         <Door
@@ -355,7 +368,7 @@ export default async function Dashboard() {
           delay={0.18}
           badge={totalChests > 0 ? totalChests : undefined}
         />
-        <Door href="/shop" icon={CartIcon} label="Shop" accent="fuchsia" delay={0.19} />
+        <Door href="/shop" icon={CartIcon} label="Shop" accent="amber" delay={0.19} />
       </div>
     </main>
   );

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rankForLevel, type Rank } from "@/lib/game/leveling";
+import TickerChart from "@/components/TickerChart";
 
 const RANK_ORDER: Rank[] = ["Beginner", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Elite"];
 const DAYS_BACK = 30;
@@ -17,19 +18,37 @@ function dayBuckets(rows: { created_at: string }[], days: number): number[] {
   return counts;
 }
 
+// Date label per bucket, oldest first — same index math as dayBuckets above,
+// so a label and its count always line up.
+function dayLabels(days: number): string[] {
+  const now = new Date();
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Array.from({ length: days }, (_, i) => {
+    const daysAgo = days - 1 - i;
+    return new Date(todayUtc - daysAgo * 86400000).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  });
+}
+
 export default async function AdminAnalytics() {
   const admin = createAdminClient();
   const since = new Date(Date.now() - DAYS_BACK * 86400000).toISOString();
 
-  const [{ data: profiles }, { data: recentWorkouts }, { data: recentWaitlist }] = await Promise.all([
-    admin
-      .from("profiles")
-      .select(
-        "xp, level, current_streak, longest_streak, total_workouts, created_at, chests_common, chests_rare, chests_legendary"
-      ),
-    admin.from("workouts").select("created_at, difficulty").gte("created_at", since),
-    admin.from("waitlist").select("created_at").gte("created_at", since),
-  ]);
+  const [{ data: profiles }, { data: recentWorkouts }, { data: recentWaitlist }, plusInterestRes] =
+    await Promise.all([
+      admin
+        .from("profiles")
+        .select(
+          "xp, level, current_streak, longest_streak, total_workouts, created_at, chests_common, chests_rare, chests_legendary"
+        ),
+      admin.from("workouts").select("created_at, difficulty").gte("created_at", since),
+      admin.from("waitlist").select("created_at").gte("created_at", since),
+      admin.from("plus_interest").select("*", { count: "exact", head: true }),
+    ]);
+  const plusInterestCount = plusInterestRes.count ?? 0;
 
   const users = (profiles ?? []) as {
     xp: number;
@@ -51,6 +70,7 @@ export default async function AdminAnalytics() {
 
   // ---- Workouts logged, last 30 days ----
   const workoutCounts = dayBuckets(workouts, DAYS_BACK);
+  const labels = dayLabels(DAYS_BACK);
 
   // ---- Rank distribution ----
   const rankCounts: Record<Rank, number> = {
@@ -92,21 +112,21 @@ export default async function AdminAnalytics() {
         <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
           Signups — last {DAYS_BACK} days
         </h2>
-        <BarChart values={signupCounts} color="bg-forge" />
+        <TickerChart values={signupCounts} labels={labels} color="#ff6a1a" />
       </section>
 
       <section>
         <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
           Workouts logged — last {DAYS_BACK} days
         </h2>
-        <BarChart values={workoutCounts} color="bg-sky-500" />
+        <TickerChart values={workoutCounts} labels={labels} color="#0ea5e9" />
       </section>
 
       <section>
         <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
           Waitlist joins — last {DAYS_BACK} days
         </h2>
-        <BarChart values={waitlistCounts} color="bg-fuchsia-500" />
+        <TickerChart values={waitlistCounts} labels={labels} color="#d946ef" />
       </section>
 
       <section>
@@ -137,22 +157,23 @@ export default async function AdminAnalytics() {
         <Stat label="Unopened Common" value={`📦 ${chestTotals.common}`} />
         <Stat label="Unopened Rare" value={`💎 ${chestTotals.rare}`} />
       </section>
-    </div>
-  );
-}
 
-function BarChart({ values, color }: { values: number[]; color: string }) {
-  const max = Math.max(1, ...values);
-  return (
-    <div className="flex h-24 items-end gap-[2px] rounded-xl border border-line bg-surface p-3">
-      {values.map((v, i) => (
-        <div
-          key={i}
-          className={`flex-1 rounded-t ${v > 0 ? color : "bg-surface2"}`}
-          style={{ height: `${Math.max(3, Math.round((v / max) * 100))}%` }}
-          title={`${v}`}
-        />
-      ))}
+      <section>
+        <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
+          Forge Plus demand
+        </h2>
+        <div className="grid grid-cols-2 gap-4">
+          <Stat
+            label="Notify-me signups"
+            value={`⭐ ${plusInterestCount}`}
+            sub={totalUsers ? `${Math.round((plusInterestCount / totalUsers) * 100)}% of users` : undefined}
+          />
+          <div className="rounded-xl border border-line bg-surface p-5 text-xs text-muted">
+            Users who tapped "Notify me when Plus launches" on /shop — a free
+            read on willingness to pay, before wiring any payment processor.
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

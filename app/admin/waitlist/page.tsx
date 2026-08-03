@@ -41,6 +41,49 @@ export default async function AdminWaitlist({
         in, no signup form or password needed to get started.
       </p>
 
+      {/* Referral clusters: invite people in waves WITH the friends who
+          referred them, so they arrive to a league that already has people
+          they know in it — instead of a cold, empty friends tab. */}
+      {(() => {
+        const byCode = new Map(list.map((w) => [w.referral_code, w]));
+        const clusters = list
+          .filter((w) => (w.referral_count ?? 0) > 0)
+          .map((w) => ({
+            referrer: w,
+            members: list.filter((m) => m.referred_by === w.referral_code),
+          }))
+          .filter((c) => c.members.length > 0)
+          .sort((a, b) => b.members.length - a.members.length)
+          .slice(0, 5);
+        if (clusters.length === 0) return null;
+        return (
+          <div className="mb-6 rounded-xl border border-forge/30 bg-forge/5 p-4">
+            <p className="mb-1 text-sm font-black uppercase tracking-wide text-forge">
+              🚀 Launch in clusters
+            </p>
+            <p className="mb-3 text-xs text-muted">
+              These people brought friends — invite each group together and
+              they arrive with their weekly league already populated.
+            </p>
+            <div className="space-y-2">
+              {clusters.map((c) => (
+                <div key={c.referrer.id} className="rounded-lg border border-line bg-surface p-3 text-sm">
+                  <p className="font-bold">
+                    {c.referrer.name || c.referrer.email}
+                    <span className="ml-2 text-xs font-normal text-muted">
+                      + {c.members.length} referred
+                    </span>
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    {c.members.map((m) => m.name || m.email).join(" · ")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full text-left text-sm">
           <thead className="bg-surface text-muted">
@@ -49,6 +92,7 @@ export default async function AdminWaitlist({
               <th className="px-4 py-2">Email</th>
               <th className="px-4 py-2">Name</th>
               <th className="px-4 py-2">Referrals</th>
+              <th className="px-4 py-2">Referred by</th>
               <th className="px-4 py-2">Joined</th>
               <th className="px-4 py-2">Invite</th>
             </tr>
@@ -60,6 +104,14 @@ export default async function AdminWaitlist({
                 <td className="px-4 py-2">{w.email}</td>
                 <td className="px-4 py-2 text-muted">{w.name || "—"}</td>
                 <td className="px-4 py-2 font-semibold text-forge">{w.referral_count}</td>
+                <td className="px-4 py-2 text-muted">
+                  {(() => {
+                    const ref = w.referred_by
+                      ? list.find((x) => x.referral_code === w.referred_by)
+                      : null;
+                    return ref ? ref.name || ref.email : "—";
+                  })()}
+                </td>
                 <td className="px-4 py-2 text-muted">
                   {new Date(w.created_at).toLocaleDateString()}
                 </td>
