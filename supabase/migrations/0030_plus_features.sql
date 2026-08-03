@@ -34,9 +34,20 @@ alter table public.season_pass_progress
 
 alter table public.season_pass_progress
   drop constraint if exists season_pass_progress_user_id_season_number_tier_key;
-alter table public.season_pass_progress
-  add constraint season_pass_progress_user_id_season_number_tier_track_key
-  unique (user_id, season_number, tier, track);
+
+-- Postgres has no ADD CONSTRAINT IF NOT EXISTS for named constraints, so
+-- guard it explicitly — this migration must be safe to re-run.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'season_pass_progress_user_id_season_number_tier_track_key'
+  ) then
+    alter table public.season_pass_progress
+      add constraint season_pass_progress_user_id_season_number_tier_track_key
+      unique (user_id, season_number, tier, track);
+  end if;
+end $$;
 
 -- A free user could otherwise insert their own 'plus' row directly (RLS
 -- only checked auth.uid() = user_id) and claim Plus season cosmetics for
