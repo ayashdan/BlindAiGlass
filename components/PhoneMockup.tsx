@@ -33,18 +33,9 @@ export default function PhoneMockup() {
           style={{ aspectRatio: "9 / 19.5" }}
         >
           <div className="flex h-full flex-col px-2.5 pb-1.5 pt-7">
-            {/* Header: avatar in a hex-emblem ring, username, class · rank */}
+            {/* Header: avatar, username, class · rank */}
             <div className="flex items-center gap-1.5">
-              <div className="relative flex h-7 w-7 flex-shrink-0 items-center justify-center">
-                <div
-                  className="absolute inset-0 bg-gradient-to-br from-rose-500 to-amber-500 opacity-80"
-                  style={{
-                    clipPath:
-                      "polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%)",
-                  }}
-                />
-                <div className="relative h-4 w-4 rounded-full bg-neutral-800" />
-              </div>
+              <div className="h-7 w-7 flex-shrink-0 rounded-full bg-gradient-to-br from-rose-500 to-amber-500" />
               <div className="min-w-0">
                 <p className="font-display truncate text-[9px] font-bold text-white">ForgeUser</p>
                 <p className="text-[6px] font-semibold text-amber-400">🔥 Titan · Bronze</p>

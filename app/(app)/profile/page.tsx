@@ -15,7 +15,6 @@ import {
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
 import { ACHIEVEMENT_COSMETICS } from "@/lib/game/cosmetics";
 import AvatarDisplay from "@/components/AvatarDisplay";
-import ClassEmblem from "@/components/ClassEmblem";
 import ShareButton from "@/components/ShareButton";
 import SubmitButton from "@/components/SubmitButton";
 import WeeklySplitEditor from "@/components/WeeklySplitEditor";
@@ -82,12 +81,11 @@ export default async function ProfilePage({
       {/* Identity card */}
       <section className="fade-in-up forge-panel forge-panel-hot glow-pulse p-6 text-center">
         <div className="relative mx-auto flex h-[130px] w-[130px] items-center justify-center">
-          <ClassEmblem charClass={charClass} size={130} />
           <AvatarDisplay
             avatarUrl={profile.avatar_url}
             avatar={profile.avatar}
             borderClass={profile.equipped_border}
-            size={80}
+            size={110}
           />
         </div>
         <h1 className="mt-3 text-2xl font-black tracking-tight">
