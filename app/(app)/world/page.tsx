@@ -24,13 +24,13 @@ export default async function WorldMapPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data } = await supabase.from("profiles").select("xp").eq("id", user.id).single();
-  const profile = data as Pick<Profile, "xp"> | null;
+  const { data } = await supabase.from("profiles").select("xp, tier").eq("id", user.id).single();
+  const profile = data as Pick<Profile, "xp" | "tier"> | null;
   if (!profile) redirect("/dashboard");
 
   const [progress, season] = await Promise.all([
     Promise.resolve(levelProgress(profile.xp)),
-    getSeasonStatus(user.id),
+    getSeasonStatus(user.id, profile.tier === "premium"),
   ]);
 
   return (
@@ -55,11 +55,30 @@ export default async function WorldMapPage() {
             {season.tiers.map((t) => (
               <div key={t.tier} className="flex-1 text-center">
                 <div className={"h-2 rounded-full " + (t.done ? "bg-fuchsia-500" : "bg-surface2")} />
+                <div
+                  className={
+                    "mt-1 h-2 rounded-full " +
+                    (t.plusDone ? "bg-amber-400" : season.isPremium ? "bg-surface2" : "bg-surface2/50")
+                  }
+                  title={
+                    season.isPremium
+                      ? "Plus season reward"
+                      : "Plus season reward — subscribe to unlock"
+                  }
+                />
                 <p className="mt-1 text-[10px] text-muted">{t.workouts}</p>
               </div>
             ))}
           </div>
           <p className="mt-2 text-xs text-muted">{season.workoutsThisSeason} workouts this season</p>
+          {!season.isPremium && (
+            <Link
+              href="/shop"
+              className="mt-2 block text-xs font-semibold text-amber-400 hover:underline"
+            >
+              ⭐ Plus unlocks a bonus cosmetic reward at every tier above →
+            </Link>
+          )}
         </section>
       )}
 

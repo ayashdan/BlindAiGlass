@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rankForLevel, type Rank } from "@/lib/game/leveling";
-import TickerChart from "@/components/admin/TickerChart";
+import TickerChart from "@/components/TickerChart";
 
 const RANK_ORDER: Rank[] = ["Beginner", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Elite"];
 const DAYS_BACK = 30;

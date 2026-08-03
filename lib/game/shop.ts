@@ -53,14 +53,24 @@ export const PLUS_BORDERS: ShopBorder[] = [
   },
 ];
 
+export type ShopTitle = { key: string; name: string; description: string };
+
+// Direct-pick titles, same "vault" principle as the borders above —
+// deterministic, never a randomized pull.
+export const PLUS_TITLES: ShopTitle[] = [
+  { key: "title_ironwill", name: "Iron Will", description: "A Plus-exclusive title." },
+  { key: "title_unbreakable", name: "Unbreakable", description: "A Plus-exclusive title." },
+  { key: "title_forged", name: "Forged", description: "A Plus-exclusive title." },
+];
+
 export const PLUS_PRICE_LABEL = "$2.99/mo · planned";
 
 export const PLUS_FEATURES: string[] = [
-  "All animated avatar borders, plus a new exclusive cosmetic every month",
-  "Deep stats: full workout history and per-muscle-group trends",
+  "The cosmetic vault: every animated border and exclusive title, pick freely, no randomness",
+  "Insights: muscle-group balance, training trends, a weekly recap, and your full PR board",
+  "A parallel season-pass track — bonus cosmetics at the same tiers everyone earns for free",
   "A custom quest slot — write your own daily mission",
   "Streak-freeze bank raised from 2 to 3",
-  "Supporter badge next to your name",
 ];
 
 export const FREE_FOREVER: string[] = [

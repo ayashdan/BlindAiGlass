@@ -706,3 +706,47 @@ No new env vars.
 - **Launch in clusters** — `/admin/waitlist` now shows referral clusters
   (who brought whom) so you can invite groups together and nobody arrives
   to an empty friends tab.
+
+---
+
+## Real Forge Plus: a cosmetic vault, insights, and a parallel season track
+
+The Plus preview from the social pass above was cosmetics + comfort with
+nothing built yet. This makes three of it real, gated on the existing
+`profiles.tier` admin flag (`/admin/users` → "Make Premium") — there's
+still no payment processor, but a comped account now actually gets
+something.
+
+**Setup — run `supabase/migrations/0030_plus_features.sql` in Supabase SQL
+Editor.** This migration also fixes a real gap: `profiles_update_own` used
+to let a user set *any* column on their own row directly (a raw REST call
+bypassing the app), including `tier` — harmless while nothing was gated on
+it, but it would have made "Plus" a free checkbox anyone could flip the
+moment something valuable hung off it. The fix locks `tier` to admin-only
+writes (the existing `/admin/users` flow already uses the service-role
+client, so it's unaffected) without touching how every other field updates.
+
+- **Cosmetic vault** — 4 animated borders + 3 titles, direct-pick from
+  `/profile`, no randomness (never a loot box). Rendered and validated
+  through one shared helper (`lib/game/cosmetics-server.ts`) so the profile
+  page can never show something the server would reject. Active while
+  subscribed, like any subscription perk — not a permanent unlock.
+- **Insights** (`/insights`) — a Plus-only analysis page: a 12-week
+  workout-frequency trend (the same stock-ticker chart from admin
+  analytics, now shared via `components/TickerChart.tsx`), a muscle-group
+  balance breakdown, "you haven't trained X in N days" callouts, a weekly
+  recap card, and a full personal-record board. Pure analysis — nothing
+  here touches XP, rank, or the leaderboard, so gating it doesn't bend the
+  "core logging stays free" rule. Free users see a locked teaser.
+- **Plus season track** — the free season pass is untouched (same tiers,
+  same XP). Plus subscribers additionally unlock a cosmetic at each of the
+  same 5/15/30/50-workout tiers, tracked via a `track` column on
+  `season_pass_progress`. These are trophies, not rentals: once claimed
+  they stay equippable even if the subscription later lapses, same as an
+  achievement. Shown as a second row on `/world`.
+
+**Deliberately not built:** selling Rare/Legendary chests as a Plus perk.
+XP-paying chests are the exact currency the weekly league and leaderboard
+run on — letting Plus buy more of them would make Plus pay-to-win, and a
+paid randomized reward is a loot box regardless of what subscription tier
+gates it. See `docs/social-growth-review.md` for the full reasoning.

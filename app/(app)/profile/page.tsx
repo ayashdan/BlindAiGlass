@@ -13,7 +13,8 @@ import {
   changePassword,
 } from "./actions";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
-import { ACHIEVEMENT_COSMETICS, RECRUITER_TITLE } from "@/lib/game/cosmetics";
+import { getUnlockedCosmetics } from "@/lib/game/cosmetics-server";
+import { PLUS_BORDERS, PLUS_TITLES } from "@/lib/game/shop";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import ShareButton from "@/components/ShareButton";
 import SubmitButton from "@/components/SubmitButton";
@@ -75,15 +76,9 @@ export default async function ProfilePage({
     characterStats.discipline
   );
 
-  const unlockedKeys = new Set(unlocked.map((a: any) => a.key as string));
-  const unlockedCosmetics = Array.from(unlockedKeys)
-    .map((k) => ({ key: k, ...ACHIEVEMENT_COSMETICS[k] }))
-    .filter((c) => c.border || c.title);
-  // The one non-achievement cosmetic: earned by recruiting a friend who
-  // sticks (3 workouts) — see the invite section on /friends.
-  if ((profile.recruit_count ?? 0) > 0) {
-    unlockedCosmetics.push({ key: "recruiter", title: RECRUITER_TITLE });
-  }
+  const { borders: unlockedBorders, titles: unlockedTitles, isPremium } = await getUnlockedCosmetics(
+    user.id
+  );
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
@@ -239,7 +234,7 @@ export default async function ProfilePage({
       </section>
 
       {/* Cosmetics */}
-      {unlockedCosmetics.length > 0 && (
+      {(unlockedTitles.length > 0 || unlockedBorders.length > 0) && (
         <section
           className="fade-in-up mt-4 rounded-2xl border border-line bg-surface p-5"
           style={{ animationDelay: "0.09s" }}
@@ -248,10 +243,11 @@ export default async function ProfilePage({
             Unlocked cosmetics
           </p>
           <p className="mb-3 text-xs text-muted">
-            Earned from achievements — nothing here is random or purchasable.
+            Earned from achievements, invites, and the season pass — direct-pick, never random.
+            {" "}⭐ marks a Plus vault or Plus season item.
           </p>
 
-          {unlockedCosmetics.some((c) => c.title) && (
+          {unlockedTitles.length > 0 && (
             <div className="mb-3">
               <p className="mb-1.5 text-xs font-semibold text-muted">Title</p>
               <div className="flex flex-wrap gap-2">
@@ -268,31 +264,30 @@ export default async function ProfilePage({
                     None
                   </SubmitButton>
                 </form>
-                {unlockedCosmetics
-                  .filter((c) => c.title)
-                  .map((c) => (
-                    <form key={c.key} action={equipCosmetic}>
-                      <input type="hidden" name="title" value={c.title} />
-                      <SubmitButton
-                        className={
-                          "press rounded-lg border px-3 py-1.5 text-xs font-bold transition " +
-                          (profile.equipped_title === c.title
-                            ? "border-forge bg-forge/15 text-forge"
-                            : "border-line text-fg hover:border-forge/50")
-                        }
-                      >
-                        {c.title}
-                      </SubmitButton>
-                    </form>
-                  ))}
+                {unlockedTitles.map((t) => (
+                  <form key={t.key} action={equipCosmetic}>
+                    <input type="hidden" name="title" value={t.key} />
+                    <SubmitButton
+                      className={
+                        "press rounded-lg border px-3 py-1.5 text-xs font-bold transition " +
+                        (profile.equipped_title === t.key
+                          ? "border-forge bg-forge/15 text-forge"
+                          : "border-line text-fg hover:border-forge/50")
+                      }
+                    >
+                      {t.vault && "⭐ "}
+                      {t.key}
+                    </SubmitButton>
+                  </form>
+                ))}
               </div>
             </div>
           )}
 
-          {unlockedCosmetics.some((c) => c.border) && (
+          {unlockedBorders.length > 0 && (
             <div>
               <p className="mb-1.5 text-xs font-semibold text-muted">Avatar border</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <form action={equipCosmetic}>
                   <input type="hidden" name="border" value="" />
                   <SubmitButton
@@ -304,25 +299,80 @@ export default async function ProfilePage({
                     ✕
                   </SubmitButton>
                 </form>
-                {unlockedCosmetics
-                  .filter((c) => c.border)
-                  .map((c) => (
-                    <form key={c.key} action={equipCosmetic}>
-                      <input type="hidden" name="border" value={c.border} />
-                      <SubmitButton
-                        className={`press h-9 w-9 rounded-full border-[3px] bg-surface2 ${c.border} ${
-                          profile.equipped_border === c.border ? "ring-2 ring-forge" : ""
-                        }`}
-                      >
-                        {""}
-                      </SubmitButton>
-                    </form>
-                  ))}
+                {unlockedBorders.map((b) => (
+                  <BorderSwatch
+                    key={b.key}
+                    borderKey={b.key}
+                    label={b.label}
+                    selected={profile.equipped_border === b.key}
+                  />
+                ))}
               </div>
             </div>
           )}
         </section>
       )}
+
+      {/* Plus vault + season track — always visible, so free users see
+          exactly what they'd get. */}
+      <section
+        className="fade-in-up mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5"
+        style={{ animationDelay: "0.1s" }}
+      >
+        <div className="mb-1 flex items-center justify-between">
+          <p className="text-sm font-black uppercase tracking-wide text-amber-400">
+            ⭐ Plus vault
+          </p>
+          {!isPremium && (
+            <Link href="/shop" className="text-xs font-semibold text-amber-400 hover:underline">
+              Unlock →
+            </Link>
+          )}
+        </div>
+        <p className="mb-3 text-xs text-muted">
+          {isPremium
+            ? "Equip any of these from the cosmetics list above."
+            : "Direct-pick borders and titles — no randomness, ever. Locked preview below."}
+        </p>
+        <div className={"flex flex-wrap gap-2 " + (isPremium ? "hidden" : "")}>
+          {PLUS_BORDERS.map((b) => (
+            <div
+              key={b.key}
+              className={`shop-ring ${b.previewClass} h-9 w-9 opacity-40 grayscale`}
+              title={b.name}
+            >
+              <span className="flex h-full w-full items-center justify-center rounded-full bg-surface2 text-xs">
+                🔒
+              </span>
+            </div>
+          ))}
+          {PLUS_TITLES.map((t) => (
+            <span
+              key={t.key}
+              className="rounded-lg border border-line px-3 py-1.5 text-xs font-bold text-muted opacity-60"
+            >
+              🔒 {t.name}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* Insights teaser/entry point */}
+      <Link
+        href="/insights"
+        className="fade-in-up mt-4 flex items-center justify-between rounded-2xl border border-sky-500/30 bg-sky-500/5 p-4 transition hover:brightness-110"
+        style={{ animationDelay: "0.11s" }}
+      >
+        <div>
+          <p className="font-display text-sm font-bold text-sky-300">📊 Insights</p>
+          <p className="text-xs text-muted">
+            {isPremium
+              ? "Muscle-group balance, trends, and your PR board."
+              : "Plus feature — see what's inside."}
+          </p>
+        </div>
+        <span className="text-muted">→</span>
+      </Link>
 
       {/* Stats */}
       <section
@@ -497,6 +547,43 @@ function Stat({
       <div className="text-lg font-black">{value}</div>
       <div className="mt-1 text-xs uppercase tracking-wide text-muted">{label}</div>
     </div>
+  );
+}
+
+// A border swatch, handling both plain achievement borders (a tailwind
+// color class) and Plus vault/season rings ("shop-ring-*", which supply
+// their own animated gradient layer via CSS — see globals.css).
+function BorderSwatch({
+  borderKey,
+  label,
+  selected,
+}: {
+  borderKey: string;
+  label: string;
+  selected: boolean;
+}) {
+  const isVaultRing = borderKey.startsWith("shop-ring-");
+  return (
+    <form action={equipCosmetic} title={label}>
+      <input type="hidden" name="border" value={borderKey} />
+      <SubmitButton
+        className={
+          isVaultRing
+            ? `shop-ring ${borderKey} press flex h-9 w-9 ${
+                selected ? "ring-2 ring-forge ring-offset-2 ring-offset-bg" : ""
+              }`
+            : `press h-9 w-9 rounded-full border-[3px] bg-surface2 ${borderKey} ${
+                selected ? "ring-2 ring-forge" : ""
+              }`
+        }
+      >
+        {isVaultRing && (
+          <span className="flex h-full w-full items-center justify-center rounded-full bg-surface2 text-[10px]">
+            {selected ? "✓" : ""}
+          </span>
+        )}
+      </SubmitButton>
+    </form>
   );
 }
 

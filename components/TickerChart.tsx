@@ -1,10 +1,11 @@
 "use client";
 
-// A "stock ticker" style chart for the admin analytics page: a big headline
-// number, a period-over-period change badge, and a thin gradient-filled
-// line underneath with a crosshair + tooltip on hover. Single series per
-// chart, so no legend box — the section heading above it names the series
-// (see the dataviz skill: one series needs no legend).
+// A "stock ticker" style chart: a big headline number, a period-over-period
+// change badge, and a thin gradient-filled line underneath with a
+// crosshair + tooltip on hover. Single series per chart, so no legend box —
+// the section heading above it names the series (see the dataviz skill:
+// one series needs no legend). Used by the admin analytics page and by the
+// Plus insights page.
 import { useId, useMemo, useState } from "react";
 
 export default function TickerChart({

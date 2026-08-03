@@ -94,6 +94,7 @@ export type WorkoutResult =
       statGains: StatGain[];
       newClass: string | null; // set only when the workout changed your class
       seasonTiersReached: SeasonTierReached[];
+      plusSeasonTiersReached: number[]; // Plus season-track tiers this workout unlocked
       recoveryBonusApplied: boolean;
       chestsEarned: { tier: "common" | "rare"; count: number }[];
     };

@@ -16,3 +16,25 @@ export const SEASON_TIERS: SeasonTier[] = [
 // short enough that "this season" still means something. The admin starts
 // each new one manually from /admin/settings; nothing here auto-rotates.
 export const SEASON_LENGTH_DAYS = 60;
+
+// The Plus season track: same tiers, same workout counts — nobody's
+// progress changes — but a Plus subscriber additionally unlocks a cosmetic
+// at each one. Never XP; only the free track pays currency, so this never
+// touches the leaderboard or the weekly league. Titles carry the season
+// number (`S${seasonNumber} ${titleSuffix}`) so a reward earned in Season 1
+// reads as a permanent trophy from that season, not a title that mutates
+// when Season 2 starts — and it stays equippable even if the subscription
+// later lapses, same as an achievement.
+export type SeasonPlusReward = { border?: string; titleSuffix?: string };
+
+export const SEASON_PLUS_REWARDS: Record<number, SeasonPlusReward> = {
+  1: { border: "shop-ring-emerald" },
+  2: { titleSuffix: "Contender" },
+  3: { border: "shop-ring-crimson" },
+  4: { titleSuffix: "Champion" },
+};
+
+export function seasonPlusTitle(seasonNumber: number, tier: number): string | null {
+  const suffix = SEASON_PLUS_REWARDS[tier]?.titleSuffix;
+  return suffix ? `S${seasonNumber} ${suffix}` : null;
+}

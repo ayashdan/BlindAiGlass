@@ -67,7 +67,7 @@ export async function logWorkout(input: {
   const { data: profData } = await supabase
     .from("profiles")
     .select(
-      "total_workouts, current_streak, longest_streak, last_workout_date, streak_freezes, trained_muscle_groups, stat_power, stat_grit, stat_endurance, stat_discipline, recovery_bonus_pct, weekly_xp, week_start, referred_by"
+      "total_workouts, current_streak, longest_streak, last_workout_date, streak_freezes, trained_muscle_groups, stat_power, stat_grit, stat_endurance, stat_discipline, recovery_bonus_pct, weekly_xp, week_start, referred_by, tier"
     )
     .eq("id", userId)
     .single();
@@ -96,7 +96,8 @@ export async function logWorkout(input: {
   // Kick it off now so its round trips overlap with everything else
   // instead of stacking on top at the end. Every logged workout also
   // drops a Common Chest — same reasoning, independent of everything else.
-  const seasonPromise = checkAndAwardSeasonTiers(userId);
+  const isPremium = prof?.tier === "premium";
+  const seasonPromise = checkAndAwardSeasonTiers(userId, isPremium);
   const commonChestPromise = awardChest(userId, "common", 1);
 
   const prevWorkouts = prof?.total_workouts ?? 0;
@@ -375,6 +376,7 @@ export async function logWorkout(input: {
     statGains,
     newClass,
     seasonTiersReached: season.reached,
+    plusSeasonTiersReached: season.plusReached,
     recoveryBonusApplied,
     chestsEarned,
   };

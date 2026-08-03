@@ -198,6 +198,10 @@ h1 {
 .shop-ring-frost::before { background: conic-gradient(from 0deg, #38bdf8, #e0f2fe, #0ea5e9, #38bdf8); }
 .shop-ring-gold::before { background: conic-gradient(from 0deg, #fbbf24, #fef3c7, #d97706, #fbbf24); }
 .shop-ring-void::before { background: conic-gradient(from 0deg, #7c3aed, #0a0a0a, #a78bfa, #7c3aed); }
+/* Season-pass Plus track rewards — distinct hues from the vault borders
+   above, so a seasonal trophy never looks like something bought. */
+.shop-ring-emerald::before { background: conic-gradient(from 0deg, #10b981, #6ee7b7, #059669, #10b981); }
+.shop-ring-crimson::before { background: conic-gradient(from 0deg, #f43f5e, #fbbf24, #b91c1c, #f43f5e); }
 
 /* ---- Forge panel system: chunky beveled panels + 3D "press" buttons,
    the Clash Royale/Fortnite-battle-pass game-UI language, reskinned with

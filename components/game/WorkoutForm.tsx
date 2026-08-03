@@ -182,6 +182,21 @@ export default function WorkoutForm({
             </div>
           )}
 
+          {result.plusSeasonTiersReached.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {result.plusSeasonTiersReached.map((tier, i) => (
+                <div
+                  key={tier}
+                  className="celebrate-pop rounded-xl border border-amber-400/40 bg-amber-400/10 p-3"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                >
+                  <p className="font-bold text-amber-300">⭐ Plus season reward unlocked!</p>
+                  <p className="text-sm text-amber-200/80">Equip it from your profile.</p>
+                </div>
+              ))}
+            </div>
+          )}
+
           {result.freezeUsed && (
             <div className="celebrate-pop mt-4 rounded-xl border border-sky-400/40 bg-sky-400/10 p-3">
               <p className="font-bold text-sky-300">🧊 Streak freeze used — your streak is safe!</p>
