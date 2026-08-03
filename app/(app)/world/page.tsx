@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { levelProgress } from "@/lib/game/leveling";
 import { getSeasonStatus } from "@/lib/game/season-server";
+import { levelRewardLadder, levelRewardLabel } from "@/lib/game/rewards";
 import WorldMapPath from "@/components/WorldMapPath";
 import type { Profile } from "@/lib/types";
 
@@ -32,6 +33,9 @@ export default async function WorldMapPage() {
     Promise.resolve(levelProgress(profile.xp)),
     getSeasonStatus(user.id, profile.tier === "premium"),
   ]);
+
+  const rewardLadder = levelRewardLadder();
+  const nextRewardLevel = rewardLadder.find((r) => r.level > progress.level)?.level;
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
@@ -107,6 +111,49 @@ export default async function WorldMapPage() {
       <div className="forge-panel relative overflow-hidden p-0">
         <WorldMapPath currentLevel={progress.level} />
       </div>
+
+      {/* The path above is the visual — this is the full, readable list of
+          exactly what every 5-level milestone gives, claimed and upcoming,
+          since a medallion icon alone can't say "Rare Chest + Silver rank". */}
+      <section className="relative z-[2] mt-6">
+        <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-muted">
+          🎁 Reward ladder
+        </h2>
+        <div className="space-y-2">
+          {rewardLadder.map((r) => {
+            const done = progress.level >= r.level;
+            const isNext = r.level === nextRewardLevel;
+            return (
+              <div
+                key={r.level}
+                className={
+                  "flex items-center gap-3 rounded-xl border p-3 " +
+                  (isNext
+                    ? "forge-panel forge-panel-hot"
+                    : done
+                      ? "border-line bg-surface"
+                      : "border-line bg-surface/50 opacity-60")
+                }
+              >
+                <span
+                  className={
+                    "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-black " +
+                    (done ? "bg-forge/15 text-forge" : "bg-surface2 text-muted")
+                  }
+                >
+                  {done ? "✓" : r.level}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold">
+                    Level {r.level} {isNext && <span className="text-amber-400">· next</span>}
+                  </p>
+                  <p className="text-xs text-muted">{levelRewardLabel(r)}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </main>
   );
 }

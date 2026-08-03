@@ -11,6 +11,7 @@ import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
 import { getNextAchievementProgress } from "@/lib/game/achievements-server";
 import { ensureTodayQuests } from "@/lib/game/quests-server";
 import { effectiveWeeklyXp } from "@/lib/game/league";
+import { nextLevelReward, levelRewardLabel } from "@/lib/game/rewards";
 import NextRewardTeaser from "@/components/NextRewardTeaser";
 import ShareButton from "@/components/ShareButton";
 import AvatarDisplay from "@/components/AvatarDisplay";
@@ -78,9 +79,10 @@ export default async function Dashboard() {
   ]);
   const questsCompleted = quests.filter((q) => q.completed).length;
 
-  // Rare Chests drop every 5 levels — how close is the next one.
-  const nextChestLevel = (Math.floor(progress.level / 5) + 1) * 5;
-  const levelsToNextChest = nextChestLevel - progress.level;
+  // Rare Chests (and sometimes a rank-up or achievement) drop every 5
+  // levels — see lib/game/rewards.ts for the full ladder shown on /world.
+  const nextReward = nextLevelReward(progress.level);
+  const levelsToNextChest = nextReward ? nextReward.level - progress.level : 0;
 
   const characterStats = {
     power: profile.stat_power,
@@ -209,6 +211,11 @@ export default async function Dashboard() {
             )}
             <span className="ml-1 text-forge">· View on the map →</span>
           </p>
+          {nextReward && (
+            <p className="mt-1 text-xs text-amber-300/90">
+              🎯 Next reward at Level {nextReward.level}: {levelRewardLabel(nextReward)}
+            </p>
+          )}
         </Link>
         <div className="mt-3">
           <ShareButton
