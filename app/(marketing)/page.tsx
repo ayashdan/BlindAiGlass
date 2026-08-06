@@ -29,6 +29,11 @@ export default function Home({
         achievements, and rank from Beginner to Elite. Fitness that actually
         keeps you coming back.
       </p>
+      <p className="mt-4 text-center">
+        <Link href="/features" className="text-sm font-semibold text-forge hover:underline">
+          See everything Forge does →
+        </Link>
+      </p>
 
       {/* A little mockup of the app itself, no screenshot needed */}
       <div className="mt-10">
