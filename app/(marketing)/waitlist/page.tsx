@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import CopyLink from "@/components/CopyLink";
+import InstallBanner from "@/components/InstallBanner";
 
 // Shows a person's waitlist position and their referral link.
 export default async function WaitlistPage({
@@ -42,6 +43,8 @@ export default async function WaitlistPage({
     <main className="mx-auto max-w-md px-6 py-16 text-center">
       <div className="text-5xl">🔥</div>
       <h1 className="mt-4 text-2xl font-black">You&apos;re on the list!</h1>
+
+      <InstallBanner />
 
       <div className="mt-6 rounded-2xl border border-line bg-surface p-8">
         <p className="text-sm uppercase tracking-widest text-muted">

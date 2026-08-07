@@ -3,6 +3,7 @@ import { joinWaitlist } from "./actions";
 import ThemeToggle from "@/components/ThemeToggle";
 import SubmitButton from "@/components/SubmitButton";
 import PhoneMockup from "@/components/PhoneMockup";
+import InstallBanner from "@/components/InstallBanner";
 
 // Public landing + waitlist signup. (A referral link "?ref=CODE" pre-fills the
 // hidden ref field so the inviter gets credit.)
@@ -39,6 +40,8 @@ export default function Home({
       <div className="mt-10">
         <PhoneMockup />
       </div>
+
+      <InstallBanner />
 
       {/* Waitlist signup */}
       <section className="mx-auto mt-12 max-w-md">
