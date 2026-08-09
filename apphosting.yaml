@@ -1,0 +1,26 @@
+# Firebase App Hosting configuration (the recommended GCP deploy path).
+# Docs: https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  # Scale to zero when nobody is using it (no cost while idle), and cap the
+  # number of instances so a traffic spike can't run up a surprise bill.
+  minInstances: 0
+  maxInstances: 2
+
+# Environment variables the app needs.
+# IMPORTANT: replace the two placeholder values with YOUR Supabase values
+# (Supabase -> Project Settings -> API). These are the PUBLIC keys — they are
+# meant to be sent to the browser (Row Level Security protects your data), so
+# it is safe for them to live here. "BUILD" availability is required so that
+# Next.js can bake the NEXT_PUBLIC_* values in when it builds the app.
+env:
+  - variable: NEXT_PUBLIC_SUPABASE_URL
+    value: "https://YOUR-PROJECT-ref.supabase.co"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
+    value: "your-anon-public-key"
+    availability:
+      - BUILD
+      - RUNTIME
