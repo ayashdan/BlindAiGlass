@@ -688,3 +688,21 @@ push-notification pipeline, so it needs the same `VAPID_PUBLIC_KEY` /
 runs from the workout-logging flow (the app's main reward moment), not from
 every small quest/chest XP tick, so a friend group doesn't get buried in
 notifications from a single session.
+
+### Daily motivational quote, now also in your first nudge
+
+No migration — pure code. The dashboard has shown a one-line motivational
+quote under the header for a while (`lib/game/motivation.ts`), picked
+deterministically from a 40-line pool keyed to `(user id, today's date)` —
+stable all day, different the next, and different from your friends' too
+since it's per-user. The pool grew from 10 to 40 lines so a repeat is now
+unlikely inside a month and a half instead of showing up every ~10 days.
+
+That same quote now also appears in the workout-reminder push notification
+(`/api/cron/workout-reminder` — the local 3pm/5pm nudge if you haven't
+trained yet, see the push-notification setup above) using the exact same
+seed, so whichever quote shows up in the notification is the same one
+waiting on your dashboard, not a second unrelated pick. It's not wired into
+the reward-reminder cron (the "one level from a Rare Chest" nudge) — that
+one's conditional on chest proximity and isn't the daily-for-everyone nudge
+the quote belongs with.

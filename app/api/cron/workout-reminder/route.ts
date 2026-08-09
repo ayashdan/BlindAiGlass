@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPushToUser } from "@/lib/push-server";
 import { dateStrInTimezone } from "@/lib/local-day";
+import { dailyMotivation } from "@/lib/game/motivation";
 
 // Runs once per UTC hour (24 entries in vercel.json — Vercel's Hobby plan
 // caps any single cron entry to firing once a day, so "check every hour"
@@ -47,14 +48,20 @@ export async function GET(request: Request) {
     const isEvening = hour === 17;
     const streak = (p.current_streak as number) ?? 0;
 
+    // Same seed the dashboard uses (lib/game/motivation.ts) — whoever gets
+    // this notification sees the identical quote if they then open the app,
+    // not a second unrelated pick.
+    const quote = dailyMotivation(`${p.id}:${theirToday}`);
+    const nudge =
+      streak > 0
+        ? `Your ${streak}-day streak is still open today — log a workout before midnight.`
+        : isEvening
+          ? "It's getting late — squeeze in a workout before the day's over."
+          : "There's still time today — get up and get moving!";
+
     await sendPushToUser(p.id, {
       title: isEvening ? "Still haven't worked out today 💪" : "Haven't hit the gym yet?",
-      body:
-        streak > 0
-          ? `Your ${streak}-day streak is still open today — log a workout before midnight.`
-          : isEvening
-            ? "It's getting late — squeeze in a workout before the day's over."
-            : "There's still time today — get up and get moving!",
+      body: `${nudge} "${quote}"`,
       url: "/workout",
     });
     sent++;
