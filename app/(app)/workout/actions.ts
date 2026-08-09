@@ -10,6 +10,8 @@ import { checkAndCompleteQuests } from "@/lib/game/quests-server";
 import { checkAndRecordPRs } from "@/lib/game/records-server";
 import { checkAndAwardSeasonTiers } from "@/lib/game/season-server";
 import { awardChest } from "@/lib/game/chests-server";
+import { checkAndNotifyWeeklyPass } from "@/lib/game/weekly-server";
+import { effectiveWeeklyXp } from "@/lib/game/weekly";
 import { VALID_MUSCLE_GROUPS } from "@/lib/game/muscle-groups";
 import { localDateStr, addDaysToDateStr, localMidnightUtcIsoForToday } from "@/lib/local-day";
 import {
@@ -64,11 +66,12 @@ export async function logWorkout(input: {
   const { data: profData } = await supabase
     .from("profiles")
     .select(
-      "total_workouts, current_streak, longest_streak, last_workout_date, streak_freezes, trained_muscle_groups, stat_power, stat_grit, stat_endurance, stat_discipline, recovery_bonus_pct"
+      "username, total_workouts, current_streak, longest_streak, last_workout_date, streak_freezes, trained_muscle_groups, stat_power, stat_grit, stat_endurance, stat_discipline, recovery_bonus_pct, weekly_xp, weekly_xp_week_start"
     )
     .eq("id", userId)
     .single();
   const prof = profData as any;
+  const weeklyXpBefore = effectiveWeeklyXp(prof?.weekly_xp ?? 0, prof?.weekly_xp_week_start ?? null);
 
   // ---- Recovery bonus (consumed by this workout, if one is banked) ----
   const recoveryPct = prof?.recovery_bonus_pct ?? 0;
@@ -227,6 +230,7 @@ export async function logWorkout(input: {
   let rank = xp1.rank;
   let leveledUp = xp1.leveledUp;
   let rankChanged = xp1.rankChanged;
+  let weeklyXp = xp1.weeklyXp;
   const bonusXp = ach.xpAwarded + quest.xpAwarded + prXp + season.xpAwarded;
   if (bonusXp > 0) {
     const xp2 = await applyXp(userId, bonusXp);
@@ -234,6 +238,7 @@ export async function logWorkout(input: {
     rank = xp2.rank;
     leveledUp = leveledUp || xp2.leveledUp;
     rankChanged = rankChanged || xp2.rankChanged;
+    weeklyXp = xp2.weeklyXp;
   }
 
   // ---- Rare Chest for every 5-level milestone this workout crossed (rare
@@ -246,12 +251,16 @@ export async function logWorkout(input: {
   }
   await commonChestPromise;
 
+  // ---- Tell any friend this workout's XP just pushed you ahead of ----
+  await checkAndNotifyWeeklyPass(userId, prof?.username ?? "A friend", weeklyXpBefore, weeklyXp);
+
   revalidatePath("/dashboard");
   revalidatePath("/quests");
   revalidatePath("/world");
   revalidatePath("/achievements");
   revalidatePath("/profile");
   revalidatePath("/chests");
+  revalidatePath("/friends");
   return {
     ok: true,
     xpEarned: xpEarned + streakBonus + bonusXp,

@@ -8,6 +8,7 @@ import { localDateStr } from "@/lib/local-day";
 import { logRestDay } from "@/app/(app)/recovery/actions";
 import { dailyMotivation } from "@/lib/game/motivation";
 import { deriveClass, CLASS_INFO } from "@/lib/game/stats";
+import { effectiveWeeklyXp } from "@/lib/game/weekly";
 import { getNextAchievementProgress } from "@/lib/game/achievements-server";
 import { ensureTodayQuests } from "@/lib/game/quests-server";
 import NextRewardTeaser from "@/components/NextRewardTeaser";
@@ -101,7 +102,11 @@ export default async function Dashboard() {
     characterStats.discipline
   );
 
-  // ---- Rival spotlight: the closest friend ahead of you in XP ----
+  // ---- Rival spotlight: the closest friend ahead of you THIS WEEK ----
+  // Weekly, not lifetime XP — a lifetime comparison means whoever started
+  // first is always the rival, forever. Resetting weekly means the chase is
+  // winnable, and comes back every Monday even after you catch up.
+  const myWeeklyXp = effectiveWeeklyXp(profile.weekly_xp, profile.weekly_xp_week_start);
   const friendIds = (friendRowsRes.data ?? []).map((r: any) =>
     r.user_id === user.id ? r.friend_id : r.user_id
   );
@@ -110,13 +115,17 @@ export default async function Dashboard() {
   if (friendIds.length > 0) {
     const { data: friendProfiles } = await supabase
       .from("profiles")
-      .select("username, xp, avatar, avatar_url")
+      .select("username, avatar, avatar_url, weekly_xp, weekly_xp_week_start")
       .in("id", friendIds);
-    const above = (friendProfiles ?? [])
-      .filter((p: any) => p.xp > profile.xp)
-      .sort((a: any, b: any) => a.xp - b.xp)[0];
+    const withWeeklyXp = (friendProfiles ?? []).map((p: any) => ({
+      ...p,
+      weeklyXp: effectiveWeeklyXp(p.weekly_xp, p.weekly_xp_week_start),
+    }));
+    const above = withWeeklyXp
+      .filter((p: any) => p.weeklyXp > myWeeklyXp)
+      .sort((a: any, b: any) => a.weeklyXp - b.weeklyXp)[0];
     if (above) rival = above;
-    else if ((friendProfiles ?? []).length > 0) leadingFriends = true;
+    else if (withWeeklyXp.length > 0) leadingFriends = true;
   }
 
   const canLogRest = profile.last_workout_date !== todayStr && profile.last_rest_date !== todayStr;
@@ -281,7 +290,8 @@ export default async function Dashboard() {
           <AvatarDisplay avatarUrl={rival.avatar_url} avatar={rival.avatar} size={32} />
           <p className="flex-1 text-sm">
             <span className="font-bold text-red-400">Rival:</span> {rival.username} is{" "}
-            <span className="font-black">{rival.xp - profile.xp} XP</span> ahead. Catch up!
+            <span className="font-black">{rival.weeklyXp - myWeeklyXp} XP</span> ahead this week.
+            Catch up!
           </p>
         </div>
       )}
@@ -290,7 +300,7 @@ export default async function Dashboard() {
           className="fade-in-up mt-4 text-center text-sm text-emerald-400"
           style={{ animationDelay: "0.06s" }}
         >
-          👑 You're leading your friends' leaderboard. Defend it.
+          👑 You're leading your friends' leaderboard this week. Defend it.
         </p>
       )}
 

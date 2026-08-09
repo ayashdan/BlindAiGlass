@@ -655,3 +655,36 @@ alter table profiles
   - The inactivity + education emails run once daily via
     `/api/cron/email-sequences` (see `vercel.json`) — same `CRON_SECRET`
     setup as the push-notification crons above.
+
+### Weekly friends leaderboard
+
+Run this migration in Supabase SQL Editor:
+
+```sql
+alter table public.profiles
+  add column if not exists weekly_xp integer not null default 0,
+  add column if not exists weekly_xp_week_start date;
+```
+
+The friends leaderboard used to rank by lifetime XP, which means whoever
+joined first wins forever and everyone else is playing for second place.
+`/friends` now defaults to **This Week** — XP earned since the most recent
+Monday (a shared UTC boundary, not each person's own timezone, so "who's
+ahead" means the same thing for every friend being compared) — with an
+**All-time** toggle for the old lifetime ranking. Nothing resets on a timer:
+a stored weekly total just reads back as 0 once its week has rolled over
+(`lib/game/weekly.ts`), same lazy-reset trick already used for streaks and
+daily quests. The dashboard's rival spotlight switched to weekly XP too, so
+your rival changes week to week instead of being permanently whoever
+happened to start earlier than you.
+
+Every XP grant (workouts, quests, chests, achievements) now also updates
+`weekly_xp` — it flows through the same `applyXp()` referee everything else
+does, so there's nothing new to fake. Logging a workout that pushes your
+weekly total past a friend's now sends **them** a push notification
+("You've been passed 🏃") pointing at `/friends` — reuses the existing
+push-notification pipeline, so it needs the same `VAPID_PUBLIC_KEY` /
+`VAPID_PRIVATE_KEY` setup as the streak reminders above. This check only
+runs from the workout-logging flow (the app's main reward moment), not from
+every small quest/chest XP tick, so a friend group doesn't get buried in
+notifications from a single session.

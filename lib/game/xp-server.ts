@@ -4,6 +4,7 @@
 // Running here (not in the browser) is what stops users from faking XP.
 import { createClient } from "@/lib/supabase/server";
 import { levelFromXp, rankForLevel } from "./leveling";
+import { currentWeekStart } from "./weekly";
 
 export type XpResult = {
   ok: boolean;
@@ -14,6 +15,7 @@ export type XpResult = {
   leveledUp: boolean;
   fromLevel: number;
   rankChanged: boolean;
+  weeklyXp: number; // this week's XP so far, after this grant
 };
 
 const FAIL: XpResult = {
@@ -25,6 +27,7 @@ const FAIL: XpResult = {
   leveledUp: false,
   fromLevel: 1,
   rankChanged: false,
+  weeklyXp: 0,
 };
 
 // Takes the caller's already-verified user id rather than re-checking
@@ -38,7 +41,7 @@ export async function applyXp(userId: string, amount: number): Promise<XpResult>
   // Read the current totals.
   const { data: profile, error: readErr } = await supabase
     .from("profiles")
-    .select("xp, level, rank")
+    .select("xp, level, rank, weekly_xp, weekly_xp_week_start")
     .eq("id", userId)
     .single();
   if (readErr || !profile) return FAIL;
@@ -51,9 +54,17 @@ export async function applyXp(userId: string, amount: number): Promise<XpResult>
   const level = levelFromXp(totalXp);
   const rank = rankForLevel(level);
 
+  // Lazy weekly reset: if the stored week has rolled over since this
+  // profile last earned XP, this grant starts a fresh weekly total instead
+  // of adding onto last week's leftover number (see effectiveWeeklyXp).
+  const weekStart = currentWeekStart();
+  const weeklyBase =
+    profile.weekly_xp_week_start === weekStart ? (profile.weekly_xp as number) : 0;
+  const weeklyXp = weeklyBase + amount;
+
   const { error: writeErr } = await supabase
     .from("profiles")
-    .update({ xp: totalXp, level, rank })
+    .update({ xp: totalXp, level, rank, weekly_xp: weeklyXp, weekly_xp_week_start: weekStart })
     .eq("id", userId);
   if (writeErr) return FAIL;
 
@@ -66,5 +77,6 @@ export async function applyXp(userId: string, amount: number): Promise<XpResult>
     leveledUp: level > fromLevel,
     fromLevel,
     rankChanged: rank !== fromRank,
+    weeklyXp,
   };
 }

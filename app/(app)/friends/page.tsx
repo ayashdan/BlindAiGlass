@@ -1,18 +1,29 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AvatarDisplay from "@/components/AvatarDisplay";
 import SubmitButton from "@/components/SubmitButton";
 import TabScreenHeader from "@/components/TabScreenHeader";
+import { effectiveWeeklyXp } from "@/lib/game/weekly";
 import { sendFriendRequest, acceptFriendRequest, removeFriend } from "./actions";
 
 // A small-group leaderboard: competing against people you actually know
 // drives daily check-ins far better than a global list full of strangers.
-export default async function FriendsPage() {
+// Defaults to the weekly reset (see lib/game/weekly.ts) rather than
+// lifetime XP — a lifetime ranking means whoever started first wins
+// forever, which is exactly what makes a friends-only leaderboard go stale.
+export default async function FriendsPage({
+  searchParams,
+}: {
+  searchParams: { by?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const byWeek = searchParams.by !== "alltime";
 
   const { data: rowsData } = await supabase
     .from("friendships")
@@ -32,7 +43,9 @@ export default async function FriendsPage() {
   const { data: profilesData } = allIds.length
     ? await supabase
         .from("profiles")
-        .select("id, username, avatar, avatar_url, xp, level, rank, prestige")
+        .select(
+          "id, username, avatar, avatar_url, xp, level, rank, prestige, weekly_xp, weekly_xp_week_start"
+        )
         .in("id", allIds)
     : { data: [] as any[] };
   const byId = new Map((profilesData ?? []).map((p: any) => [p.id, p]));
@@ -40,7 +53,8 @@ export default async function FriendsPage() {
   const friendProfiles = friendIds
     .map((id) => byId.get(id))
     .filter((p): p is any => Boolean(p))
-    .sort((a, b) => b.xp - a.xp);
+    .map((p) => ({ ...p, weeklyXp: effectiveWeeklyXp(p.weekly_xp, p.weekly_xp_week_start) }))
+    .sort((a, b) => (byWeek ? b.weeklyXp - a.weeklyXp : b.xp - a.xp));
 
   return (
     <main className="mx-auto max-w-lg px-6 py-12">
@@ -123,9 +137,38 @@ export default async function FriendsPage() {
       )}
 
       <section>
-        <p className="mb-2 text-sm font-black uppercase tracking-wide text-muted">
-          Friends leaderboard ({friendProfiles.length})
-        </p>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-sm font-black uppercase tracking-wide text-muted">
+            Friends leaderboard ({friendProfiles.length})
+          </p>
+          {byWeek && <p className="text-xs text-muted">Resets every Monday</p>}
+        </div>
+
+        <div className="mb-3 flex gap-2">
+          <Link
+            href="/friends"
+            className={
+              "press rounded-lg border px-3 py-1.5 text-sm font-semibold transition " +
+              (byWeek
+                ? "border-forge bg-forge/15 text-forge"
+                : "border-line text-fg hover:border-forge/50")
+            }
+          >
+            This Week
+          </Link>
+          <Link
+            href="/friends?by=alltime"
+            className={
+              "press rounded-lg border px-3 py-1.5 text-sm font-semibold transition " +
+              (!byWeek
+                ? "border-forge bg-forge/15 text-forge"
+                : "border-line text-fg hover:border-forge/50")
+            }
+          >
+            All-time
+          </Link>
+        </div>
+
         <div className="space-y-2">
           {friendProfiles.map((p, i) => (
             <div
@@ -149,7 +192,9 @@ export default async function FriendsPage() {
                   Level {p.level} · {p.rank}
                 </p>
               </div>
-              <span className="font-semibold text-forge">{p.xp} XP</span>
+              <span className="font-semibold text-forge">
+                {byWeek ? `${p.weeklyXp} XP` : `${p.xp} XP`}
+              </span>
             </div>
           ))}
           {friendProfiles.length === 0 && (

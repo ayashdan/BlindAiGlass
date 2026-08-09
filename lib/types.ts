@@ -6,6 +6,8 @@ export type Profile = {
   avatar: string;
   avatar_url: string | null; // an uploaded photo, if any — wins over `avatar` emoji
   xp: number; // total lifetime XP
+  weekly_xp: number; // XP earned since weekly_xp_week_start — see lib/game/weekly.ts
+  weekly_xp_week_start: string | null; // YYYY-MM-DD (Monday); null until the first weekly grant
   level: number;
   rank: string;
   current_streak: number;
