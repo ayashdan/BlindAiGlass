@@ -13,9 +13,6 @@ runConfig:
 # meant to be sent to the browser (Row Level Security protects your data), so
 # it is safe for them to live here. "BUILD" availability is required so that
 # Next.js can bake the NEXT_PUBLIC_* values in when it builds the app.
-#
-# Google sign-in itself is configured in the Supabase dashboard, not here —
-# see .env.local.example for the one-time setup steps.
 env:
   - variable: NEXT_PUBLIC_SUPABASE_URL
     value: "https://YOUR-PROJECT-ref.supabase.co"

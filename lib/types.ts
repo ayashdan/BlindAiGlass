@@ -1,231 +1,93 @@
-// Domain types mirroring the Supabase schema (supabase/migrations/0001_bayran_schema.sql).
+// Shared TypeScript shapes used across the app.
 
-export type ProjectStatus = "active" | "on_hold" | "complete" | "cancelled";
-export type TaskStatus = "not_started" | "in_progress" | "complete" | "blocked";
-export type DesignStatus = "not_selected" | "selected" | "ordered" | "received";
-export type MaterialStatus = "needed" | "ordered" | "backordered" | "delivered" | "installed";
-export type SubStatus = "not_started" | "in_progress" | "complete";
-export type PaymentStatus = "pending" | "invoiced" | "paid";
-export type ChangeOrderStatus = "pending" | "approved" | "rejected";
-export type TradeScopeStatus = "not_started" | "in_progress" | "complete";
-export type Role = "admin" | "member";
-
-export interface Profile {
+export type Profile = {
   id: string;
-  email: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  role: Role;
+  username: string;
+  avatar: string;
+  avatar_url: string | null; // an uploaded photo, if any — wins over `avatar` emoji
+  xp: number; // total lifetime XP
+  weekly_xp: number; // XP earned since weekly_xp_week_start — see lib/game/weekly.ts
+  weekly_xp_week_start: string | null; // YYYY-MM-DD (Monday); null until the first weekly grant
+  level: number;
+  rank: string;
+  current_streak: number;
+  longest_streak: number;
+  total_workouts: number;
+  last_workout_date: string | null;
+  is_admin: boolean;
   created_at: string;
-}
+  streak_freezes: number;
+  trained_muscle_groups: string[];
+  prestige: number;
+  stat_power: number;
+  stat_grit: number;
+  stat_endurance: number;
+  stat_discipline: number;
+  equipped_border: string | null;
+  equipped_title: string | null;
+  last_rest_date: string | null;
+  recovery_bonus_pct: number;
+  split_choice_date: string | null;
+  split_choice: string | null;
+  // Per day-of-week (see WEEKLY_SPLIT_DISPLAY_ORDER): either the muscle
+  // groups scheduled that day, or "rest". Missing = not scheduled.
+  weekly_split_schedule: Record<string, string[] | "rest">;
+  tier: "free" | "premium";
+  chests_common: number;
+  chests_rare: number;
+  chests_legendary: number;
+};
 
-export interface Project {
-  id: string;
+// An achievement the user just unlocked.
+export type UnlockedAchievement = {
+  key: string;
   name: string;
-  client_name: string;
-  client_email: string | null;
-  client_phone: string | null;
-  address: string | null;
-  project_type: string | null;
-  roc_number: string | null;
-  pm_id: string | null;
-  status: ProjectStatus;
-  start_date: string | null;
-  target_completion_date: string | null;
-  contract_value: number;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
+  icon: string;
+  xpReward: number;
+};
 
-export interface ProjectFinancials {
-  project_id: string;
-  total_contract_value: number;
-  approved_change_orders: number;
-  pending_change_orders: number;
-  adjusted_contract_value: number;
-  received_from_client: number;
-  balance_due_from_client: number;
-  total_sub_contracts: number;
-  paid_to_subs: number;
-  balance_owed_to_subs: number;
-  materials_cost: number;
-  materials_charged_to_customer: number;
-  materials_profit: number;
-  est_job_margin: number;
-  tasks_total: number;
-  tasks_complete: number;
-  materials_pending: number;
-  design_items_pending: number;
-}
-
-export interface Task {
-  id: string;
-  project_id: string;
+// A daily quest the user just completed.
+export type CompletedQuest = {
+  key: string;
   title: string;
-  category: string | null;
-  assigned_to: string | null;
-  start_date: string | null;
-  due_date: string | null;
-  status: TaskStatus;
-  notes: string | null;
-  created_at: string;
-}
-
-export interface DesignSelection {
-  id: string;
-  project_id: string;
-  area: string | null;
-  item: string;
-  description: string | null;
-  status: DesignStatus;
-  selected_by: string | null;
-  date_selected: string | null;
-  notes: string | null;
-  created_at: string;
-}
-
-export interface RoomMeasurement {
-  id: string;
-  project_id: string;
-  area: string;
-  width_ft: number | null;
-  length_ft: number | null;
-  height_ft: number | null;
-  floor_sqft: number;
-  perimeter_lf: number;
-  wall_sqft: number;
-  notes: string | null;
-  created_at: string;
-}
-
-export interface Material {
-  id: string;
-  project_id: string;
-  area: string | null;
-  material: string;
-  vendor: string | null;
-  qty: number | null;
-  unit: string | null;
-  unit_cost: number | null;
-  total_cost: number;
-  status: MaterialStatus;
-  order_date: string | null;
-  po_number: string | null;
-  charged_to_customer: number;
-  materials_profit: number;
-  notes: string | null;
-  created_at: string;
-}
-
-export interface Subcontractor {
-  id: string;
-  project_id: string;
-  trade: string | null;
-  company: string;
-  contact: string | null;
-  contract_amount: number;
-  amount_paid: number;
-  balance_due: number;
-  last_payment_date: string | null;
-  status: SubStatus;
-  notes: string | null;
-  created_at: string;
-}
-
-export interface CustomerPayment {
-  id: string;
-  project_id: string;
-  payment_number: number | null;
-  description: string | null;
-  amount_due: number;
-  amount_received: number;
-  balance_remaining: number;
-  date_received: string | null;
-  payment_method: string | null;
-  status: PaymentStatus;
-  notes: string | null;
-  created_at: string;
-}
-
-export interface ChangeOrder {
-  id: string;
-  project_id: string;
-  co_number: number | null;
-  description: string;
-  date_submitted: string | null;
-  date_approved: string | null;
-  amount: number;
-  status: ChangeOrderStatus;
-  amount_received: number;
-  balance_remaining: number;
-  notes: string | null;
-  created_at: string;
-}
-
-export interface TradeScopeItem {
-  id: string;
-  project_id: string;
-  trade: string;
-  scope_item: string | null;
-  description: string | null;
-  status: TradeScopeStatus;
-  assigned_sub: string | null;
-  start_date: string | null;
-  complete_date: string | null;
-  notes: string | null;
-  created_at: string;
-}
-
-export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
-  active: "Active",
-  on_hold: "On Hold",
-  complete: "Complete",
-  cancelled: "Cancelled",
+  icon: string;
+  xpReward: number;
 };
 
-export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
-  not_started: "Not Started",
-  in_progress: "In Progress",
-  complete: "Complete",
-  blocked: "Blocked",
+// A personal record the user just beat (never fires on the first-ever entry
+// in a category — only on genuinely improving past a prior best).
+export type NewRecord = {
+  category: string;
+  label: string;
+  value: number; // minutes
 };
 
-export const DESIGN_STATUS_LABEL: Record<DesignStatus, string> = {
-  not_selected: "Not Selected",
-  selected: "Selected",
-  ordered: "Ordered",
-  received: "Received",
-};
+// A stat gain from a single workout (power/grit/endurance).
+export type StatGain = { stat: string; amount: number };
 
-export const MATERIAL_STATUS_LABEL: Record<MaterialStatus, string> = {
-  needed: "Needed",
-  ordered: "Ordered",
-  backordered: "Backordered",
-  delivered: "Delivered",
-  installed: "Installed",
-};
+// A season pass tier crossed by this workout.
+export type SeasonTierReached = { tier: number; xpReward: number };
 
-export const SUB_STATUS_LABEL: Record<SubStatus, string> = {
-  not_started: "Not Started",
-  in_progress: "In Progress",
-  complete: "Complete",
-};
-
-export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
-  pending: "Pending",
-  invoiced: "Invoiced",
-  paid: "Paid",
-};
-
-export const CHANGE_ORDER_STATUS_LABEL: Record<ChangeOrderStatus, string> = {
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
-};
-
-export const TRADE_SCOPE_STATUS_LABEL: Record<TradeScopeStatus, string> = {
-  not_started: "Not Started",
-  in_progress: "In Progress",
-  complete: "Complete",
-};
+// The result of logging a workout (shared between the server action and the UI).
+export type WorkoutResult =
+  | { ok: false; error: string }
+  | {
+      ok: true;
+      xpEarned: number; // workout + streak + achievement + quest + PR + season XP
+      streak: number;
+      leveledUp: boolean;
+      level: number;
+      rank: string;
+      rankChanged: boolean;
+      unlocked: UnlockedAchievement[];
+      questsCompleted: CompletedQuest[];
+      newRecords: NewRecord[];
+      freezeUsed: boolean;
+      freezeEarned: boolean;
+      streakFreezes: number;
+      statGains: StatGain[];
+      newClass: string | null; // set only when the workout changed your class
+      seasonTiersReached: SeasonTierReached[];
+      recoveryBonusApplied: boolean;
+      chestsEarned: { tier: "common" | "rare"; count: number }[];
+    };

@@ -2,64 +2,324 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark is the default; .light overrides it when the user toggles. No class
-   = dark, so there's no flash on first paint for the common case. */
+/* Dark is the default (matches Forge's original identity); .light overrides
+   it when the user toggles. No class = dark, so there's no flash on first
+   paint for the common case. */
 :root,
 .dark {
   color-scheme: dark;
-  --bg: 12 15 20;
-  --surface: 22 26 33;
-  --surface-2: 33 39 48;
-  --line: 42 48 58;
-  --fg: 240 242 245;
-  --muted: 148 157 171;
+  --bg: 10 10 10;
+  --surface: 23 23 23;
+  --surface-2: 38 38 38;
+  --line: 38 38 38;
+  --fg: 245 245 245;
+  --muted: 163 163 163;
 }
 
 .light {
   color-scheme: light;
-  --bg: 247 248 250;
+  --bg: 250 250 250;
   --surface: 255 255 255;
-  --surface-2: 241 243 246;
-  --line: 224 228 233;
-  --fg: 21 25 32;
-  --muted: 100 110 124;
+  --surface-2: 244 244 245;
+  --line: 228 228 231;
+  --fg: 23 23 23;
+  --muted: 113 113 122;
 }
 
 body {
   @apply bg-bg text-fg antialiased transition-colors duration-300;
 }
 
+/* Every page title in the app is an <h1> — one rule here gives all of them
+   the bold condensed display face instead of touching every page. Body
+   copy stays on the default sans for readability; use the `font-display`
+   utility (Tailwind auto-generates it from tailwind.config.ts) for other
+   headline-ish spots like big stat numbers or nav labels. */
 h1 {
   font-family: var(--font-display), sans-serif;
 }
 
+/* ---- Phase 7: shared motion ---- */
+
 @keyframes fade-in-up {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 .fade-in-up {
-  animation: fade-in-up 0.4s ease-out both;
+  animation: fade-in-up 0.5s ease-out both;
 }
 
-/* A tactile "press" feel for buttons. */
+/* A tactile "press" feel for primary buttons. */
 .press {
   transition: transform 0.15s ease;
 }
 .press:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
+/* Pop-in used for achievement cards and the level-up banner: overshoots
+   slightly then settles, ending on a soft glow so unlocked things keep
+   feeling special after the motion stops. */
+@keyframes celebrate-pop {
+  0%   { opacity: 0; transform: scale(0.6) translateY(12px); box-shadow: 0 0 0 rgba(250, 204, 21, 0); }
+  55%  { opacity: 1; transform: scale(1.08) translateY(0); }
+  70%  { transform: scale(1) translateY(0); box-shadow: 0 0 28px rgba(250, 204, 21, 0.45); }
+  100% { transform: scale(1) translateY(0); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
+}
+.celebrate-pop {
+  animation: celebrate-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes celebrate-bounce {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  20%      { transform: rotate(-14deg) scale(1.15); }
+  40%      { transform: rotate(10deg) scale(1.15); }
+  60%      { transform: rotate(-6deg) scale(1.05); }
+  80%      { transform: rotate(4deg) scale(1.05); }
+}
+.celebrate-bounce {
+  animation: celebrate-bounce 0.8s ease-in-out both;
+}
+
+@keyframes confetti-fall {
+  0%   { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+.confetti-piece {
+  animation: confetti-fall linear infinite;
+}
+
+/* ---- Game-feel pass: ambient depth, shimmer, glow ---- */
+
+/* A slow-breathing forge-orange glow behind the whole app instead of a flat
+   black void. Fixed + pointer-events:none so it never interferes with
+   scrolling or taps — purely atmosphere. */
+@keyframes ambient-drift {
+  0%, 100% { transform: translate(-6%, -4%) scale(1); opacity: 0.55; }
+  50%      { transform: translate(4%, 6%) scale(1.15); opacity: 0.85; }
+}
+.ambient-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.ambient-glow::before,
+.ambient-glow::after {
+  content: "";
+  position: absolute;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  background: radial-gradient(circle, rgb(255 106 26 / 0.16), transparent 70%);
+  animation: ambient-drift 16s ease-in-out infinite;
+}
+.ambient-glow::before { top: -20%; left: -15%; }
+.ambient-glow::after {
+  bottom: -25%;
+  right: -15%;
+  background: radial-gradient(circle, rgb(217 119 6 / 0.13), transparent 70%);
+  animation-delay: -8s;
+  animation-duration: 20s;
+}
+.light .ambient-glow::before,
+.light .ambient-glow::after { opacity: 0.5; }
+
+.xp-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+/* A soft breathing glow for the "hero" card on the dashboard — reads as
+   the character's current status, not just a static panel. */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(255, 106, 26, 0); }
+  50%      { box-shadow: 0 0 42px -6px rgb(255 106 26 / 0.35); }
+}
+.glow-pulse { animation: glow-pulse 3.4s ease-in-out infinite; }
+
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25%      { transform: scale(1.08) rotate(-4deg); }
+  50%      { transform: scale(0.96) rotate(3deg); }
+  75%      { transform: scale(1.05) rotate(-2deg); }
+}
+.flame-flicker { display: inline-block; animation: flame-flicker 1.8s ease-in-out infinite; }
+
+/* Cards lift and pick up a rim of light on hover/focus — makes the whole
+   app feel responsive to touch, not just the buttons. */
+.game-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.game-card:hover,
+.game-card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -16px rgb(0 0 0 / 0.5);
+}
+
+@keyframes chest-shake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  15%      { transform: rotate(-6deg) scale(1.03); }
+  30%      { transform: rotate(6deg) scale(1.03); }
+  45%      { transform: rotate(-8deg) scale(1.05); }
+  60%      { transform: rotate(8deg) scale(1.05); }
+  75%      { transform: rotate(-4deg) scale(1.03); }
+}
+.chest-shake { animation: chest-shake 0.65s ease-in-out; }
+
+@keyframes count-tick {
+  0%   { transform: translateY(4px); opacity: 0.4; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.count-tick { animation: count-tick 0.25s ease-out; }
+
+/* ---- Shop-exclusive border previews: rotating gradient rings, distinct
+   from the plain solid-color borders achievements unlock for free. ---- */
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+.shop-ring {
+  position: relative;
+  border-radius: 50%;
+  padding: 3px;
+}
+.shop-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: ring-spin 3s linear infinite;
+}
+.shop-ring-inferno::before { background: conic-gradient(from 0deg, #ff6a1a, #fbbf24, #fb7185, #ff6a1a); }
+.shop-ring-frost::before { background: conic-gradient(from 0deg, #38bdf8, #e0f2fe, #0ea5e9, #38bdf8); }
+.shop-ring-gold::before { background: conic-gradient(from 0deg, #fbbf24, #fef3c7, #d97706, #fbbf24); }
+.shop-ring-void::before { background: conic-gradient(from 0deg, #7c3aed, #0a0a0a, #a78bfa, #7c3aed); }
+
+/* ---- Forge panel system: chunky beveled panels + 3D "press" buttons,
+   the Clash Royale/Fortnite-battle-pass game-UI language, reskinned with
+   Forge's own molten-metal/blacksmith palette instead of a literal
+   wood-and-kingdom theme. A thick two-tone border reads as a forged metal
+   frame; the inset highlight/shadow pair fakes a beveled, riveted edge. ---- */
+.forge-panel {
+  position: relative;
+  border-radius: 20px;
+  border: 3px solid rgb(120 72 30 / 0.55);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 40%), rgb(var(--surface));
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 0.07),
+    inset 0 -3px 0 rgb(0 0 0 / 0.35),
+    0 8px 20px -10px rgb(0 0 0 / 0.55);
+}
+.light .forge-panel {
+  border-color: rgb(217 119 6 / 0.35);
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 0.5),
+    inset 0 -3px 0 rgb(0 0 0 / 0.06),
+    0 8px 20px -12px rgb(0 0 0 / 0.25);
+}
+/* "Hot" variant — an ember gradient bleeding up from the base, for the
+   panels that represent your live progress (level card, current chest). */
+.forge-panel-hot {
+  border-color: rgb(255 106 26 / 0.6);
+  background:
+    radial-gradient(120% 80% at 50% 120%, rgb(255 106 26 / 0.18), transparent 60%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.04), transparent 40%),
+    rgb(var(--surface));
+}
+
+/* Color variants for .forge-panel — declared after it, same specificity, so
+   these win on border/background instead of silently fighting a Tailwind
+   bg- or border- utility class placed alongside .forge-panel (same property,
+   same specificity, whichever comes later in the stylesheet wins — that's
+   these, on purpose). */
+.forge-accent-emerald { border-color: rgb(4 120 87 / 0.55); background: linear-gradient(180deg, rgb(4 120 87 / 0.14), transparent 55%), rgb(var(--surface)); }
+.forge-accent-sky { border-color: rgb(2 132 199 / 0.55); background: linear-gradient(180deg, rgb(2 132 199 / 0.14), transparent 55%), rgb(var(--surface)); }
+.forge-accent-violet { border-color: rgb(109 40 217 / 0.55); background: linear-gradient(180deg, rgb(109 40 217 / 0.14), transparent 55%), rgb(var(--surface)); }
+.forge-accent-amber { border-color: rgb(180 83 9 / 0.55); background: linear-gradient(180deg, rgb(180 83 9 / 0.14), transparent 55%), rgb(var(--surface)); }
+.forge-accent-rose { border-color: rgb(190 18 60 / 0.55); background: linear-gradient(180deg, rgb(190 18 60 / 0.14), transparent 55%), rgb(var(--surface)); }
+.forge-accent-fuchsia { border-color: rgb(162 28 175 / 0.55); background: linear-gradient(180deg, rgb(162 28 175 / 0.14), transparent 55%), rgb(var(--surface)); }
+
+/* A raised button with a solid "side" that compresses flat on tap — the
+   single most recognizable mobile-game button feel. Pair with a
+   --press-shadow custom property to match the button's own color; falls
+   back to a plain dark edge. */
+.press-3d {
+  position: relative;
+  box-shadow: 0 4px 0 0 var(--press-shadow, rgb(0 0 0 / 0.4));
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.press-3d:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 0 var(--press-shadow, rgb(0 0 0 / 0.4));
+}
+
+@keyframes ember-drift {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-140px) translateX(var(--drift, 12px)); opacity: 0; }
+}
+.ember-particle {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffcf8a, #ff6a1a 70%);
+  animation: ember-drift linear infinite;
+  pointer-events: none;
+}
+
+@keyframes beacon-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50%      { transform: scale(1.6); opacity: 0; }
+}
+.beacon-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: beacon-pulse 1.8s ease-out infinite;
+}
+
+/* Clash-Royale-style paging between the five main tabs (SwipeNav) — the
+   incoming screen slides in from the direction it "arrived" from, whether
+   you got there by swiping or tapping the bottom nav. */
+@keyframes page-slide-in-left {
+  from { transform: translateX(28px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes page-slide-in-right {
+  from { transform: translateX(-28px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.page-slide-in-left { animation: page-slide-in-left 0.22s ease-out; }
+.page-slide-in-right { animation: page-slide-in-right 0.22s ease-out; }
+
 @media (prefers-reduced-motion: reduce) {
-  .fade-in-up {
+  .fade-in-up,
+  .celebrate-pop,
+  .celebrate-bounce,
+  .confetti-piece,
+  .ambient-glow::before,
+  .ambient-glow::after,
+  .glow-pulse,
+  .flame-flicker,
+  .count-tick,
+  .chest-shake,
+  .shop-ring::before,
+  .ember-particle,
+  .beacon-pulse,
+  .page-slide-in-left,
+  .page-slide-in-right {
     animation: none !important;
   }
   .press:active {
+    transform: none;
+  }
+  .press-3d:active {
+    transform: none;
+  }
+  .game-card:hover,
+  .game-card:focus-within {
     transform: none;
   }
 }

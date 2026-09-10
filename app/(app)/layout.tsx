@@ -1,21 +1,18 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/data";
-import AppHeader from "@/components/AppHeader";
+import BottomNav from "@/components/BottomNav";
+import SwipeNav from "@/components/SwipeNav";
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
-
-  const profile = await getCurrentProfile();
-
+// Shared shell for every logged-in screen: the ambient background, swipe
+// paging between the five main tabs, and the persistent bottom tab bar —
+// navigation and atmosphere stay consistent everywhere instead of each
+// page being an isolated island.
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <AppHeader profile={profile} />
-      <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">{children}</main>
+      <div className="ambient-glow" aria-hidden="true" />
+      <SwipeNav>
+        <div className="pb-24">{children}</div>
+      </SwipeNav>
+      <BottomNav />
     </>
   );
 }
