@@ -1,6 +1,6 @@
-# Deploying Forge on Google Cloud (GCP)
+# Deploying BayRan on Google Cloud (GCP)
 
-Forge is a full-stack Next.js app (it has a server side), so it needs a host
+BayRan is a full-stack Next.js app (it has a server side), so it needs a host
 that runs Node.js — not just static file hosting. Two GCP options:
 
 - **Option A — Firebase App Hosting** ⭐ recommended (git-connected, auto-deploys).
@@ -22,14 +22,16 @@ Both bill through your existing GCP billing account. Set `minInstances: 0`
    Make sure it's on the **Blaze** (pay-as-you-go) plan.
 3. In the left menu open **App Hosting** → **Get started**.
 4. **Connect GitHub** and choose the **`ForgeMot`** repo, branch
-   `claude/ai-assistant-visually-impaired-ukk9t2` (or `main` once merged).
+   `claude/bayran-construction-app-v3xp8s` (or `main` once merged).
 5. Firebase reads `apphosting.yaml`, builds the app, and gives you a live URL
-   like `https://forge--<id>.web.app`.
+   like `https://bayran--<id>.web.app`.
 
 **After that:** every `git push` to that branch auto-builds and deploys. Done.
 
 > Supabase step: in Supabase → Authentication → URL Configuration, add your
-> new App Hosting URL to the allowed redirect/site URLs.
+> new App Hosting URL to the allowed redirect/site URLs. Also add it as an
+> authorized redirect URI on the Google OAuth client (see
+> `.env.local.example` for the Google sign-in setup steps).
 
 ---
 
@@ -46,21 +48,22 @@ baked into the browser bundle. Easiest with a local Docker build:
 docker build \
   --build-arg NEXT_PUBLIC_SUPABASE_URL="https://YOUR-PROJECT-ref.supabase.co" \
   --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-public-key" \
-  -t gcr.io/PROJECT_ID/forge .
+  -t gcr.io/PROJECT_ID/bayran .
 
 # 2. Push it to Google's container registry
-docker push gcr.io/PROJECT_ID/forge
+docker push gcr.io/PROJECT_ID/bayran
 
 # 3. Deploy to Cloud Run
-gcloud run deploy forge \
-  --image gcr.io/PROJECT_ID/forge \
+gcloud run deploy bayran \
+  --image gcr.io/PROJECT_ID/bayran \
   --region us-central1 \
   --allow-unauthenticated \
   --max-instances 2
 ```
 
 Cloud Run prints your live URL when it finishes. Add that URL to Supabase →
-Authentication → URL Configuration.
+Authentication → URL Configuration, and to the Google OAuth client's
+authorized redirect URIs.
 
 > No Docker installed? App Hosting (Option A) avoids Docker entirely — prefer it.
 
