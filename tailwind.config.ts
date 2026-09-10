@@ -11,10 +11,11 @@ const config: Config = {
         display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
-        // Forge's accent: a molten orange, used for XP, buttons, highlights.
-        forge: {
-          DEFAULT: "#ff6a1a",
-          soft: "#ff8c4b",
+        // BayRan's accent: a construction-amber, used for buttons, links,
+        // active states, and highlights throughout the app.
+        brand: {
+          DEFAULT: "#d97706",
+          soft: "#f59e0b",
         },
         // Semantic surface tokens, driven by CSS variables so light/dark mode
         // is a class toggle rather than sprinkling dark: everywhere.
